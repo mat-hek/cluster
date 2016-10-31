@@ -1,11 +1,12 @@
 module Processor (
-	input proc_clock,
+	input clock,
 	input mem_clock,
 	output RUN,
 	input START,
 	input [7:0] START_ADDR,
 	output TRIGGER_SPAWN,
 	output [7:0] SPAWN_ADDR,
+	input DISP_ACK,
 	input [7:0] MEM_DBG_ADDRESS,
 	output [7:0] MEM_DBG_OUT,
 	input [7:0] STACK_DBG_ADDRESS,
@@ -13,8 +14,12 @@ module Processor (
 	input [7:0] CODE_DBG_ADDRESS,
 	output [15:0] CODE_DBG_OUT,
 	output [7:0] REGS [0:7],
-	output [7:0] IP
+	output [7:0] IP,
+	output dbg
 );
+
+logic LAST_DISP_ACK;
+
 
 `define HLT 		4'b0000
 `define JXX 		4'b0001
@@ -163,7 +168,7 @@ logic [1:0] STAGE;
 // Structural coding
 //=============================================================================
 
-always@(posedge proc_clock) begin
+always@(posedge clock) begin
 	if(START == 1) begin
 		RUN <= 1;
 		STAGE <= 0;
@@ -330,9 +335,12 @@ always@(posedge proc_clock) begin
 					end
 
 					`SPAWN: begin
-						SPAWN_ADDR <= `NUM;
-						TRIGGER_SPAWN <= ~TRIGGER_SPAWN;
-						STAGE <= 0;
+						if(DISP_ACK == LAST_DISP_ACK) begin
+							LAST_DISP_ACK <= ~DISP_ACK;
+							SPAWN_ADDR <= `NUM;
+							TRIGGER_SPAWN <= ~TRIGGER_SPAWN;
+							STAGE <= 0;
+						end;
 					end
 
 					`LEA: begin

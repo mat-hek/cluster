@@ -373,8 +373,6 @@ debouncer bt_clk
 	.bt_act(button_clk)
 );
 
-assign oLEDR[10] = button_clk;
-
 logic auto_clk;
 prescaler pres
 (
@@ -483,6 +481,10 @@ logic proc_start[0:PROC_CNT-1];
 logic [7:0] proc_start_addr[0:PROC_CNT-1];
 logic [7:0] proc_ip[0:PROC_CNT-1];
 assign oLEDR[7:0] = proc_ip[CURRENT_PROC_NO];
+logic proc_dbg[0:PROC_CNT-1];
+logic proc_disp_ack[0:PROC_CNT-1];
+
+assign oLEDR[10] = proc_spawn[1];
 
 assign oLEDR[16] = proc_running[0];
 assign oLEDR[17] = proc_running[1];
@@ -490,7 +492,7 @@ assign oLEDR[13] = proc_start[0];
 assign oLEDR[12] = proc_start[1];
 
 Dispatcher #(.PROC_CNT(PROC_CNT)) d(
-	.start(START),
+	.start(~START),
 	.clock(clock),
 	.memory_clock(iCLK_28),
 	.proc_running(proc_running),
@@ -498,16 +500,19 @@ Dispatcher #(.PROC_CNT(PROC_CNT)) d(
 	.proc_onspawn(proc_spawn),
 	.proc_start_addr(proc_start_addr),
 	.proc_start(proc_start),
+	.proc_ack(proc_disp_ack),
 	.dbg_1(oLEDR[15]),
 	.dbg_2(oLEDR[14]),
 	.dbg_3(oLEDR[11])
 );
 
+assign oLEDR[9] = proc_dbg[1];
+
 genvar i;
 generate
   for (i = 0; i < PROC_CNT; i=i+1) begin:gen_procs
 		Processor proc(
-			.proc_clock(clock),
+			.clock(clock),
 			.mem_clock(iCLK_28),
 			.RUN(proc_running[i]),
 			.START(proc_start[i]),
@@ -521,7 +526,9 @@ generate
 			.STACK_DBG_ADDRESS(STACK_DBG_ADDRESS[i]),
 			.STACK_DBG_OUT(STACK_OUTS[i]),
 			.REGS(REGS[i]),
-			.IP(proc_ip[i])
+			.IP(proc_ip[i]),
+			.DISP_ACK(proc_disp_ack[i]),
+			.dbg(proc_dbg[i])
 		);
   end
 endgenerate
