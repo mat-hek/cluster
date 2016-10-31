@@ -368,10 +368,12 @@ debouncer start
 logic button_clk;
 debouncer bt_clk
 (
-	.button(iKEY[0]),
+	.button(iKEY[3]),
 	.clk(iCLK_28),
 	.bt_act(button_clk)
 );
+
+assign oLEDR[10] = button_clk;
 
 logic auto_clk;
 prescaler pres
@@ -484,8 +486,8 @@ assign oLEDR[7:0] = proc_ip[CURRENT_PROC_NO];
 
 assign oLEDR[16] = proc_running[0];
 assign oLEDR[17] = proc_running[1];
-assign oLEDR[13] = proc_start[1];
-assign oLEDR[12] = proc_start[0];
+assign oLEDR[13] = proc_start[0];
+assign oLEDR[12] = proc_start[1];
 
 Dispatcher #(.PROC_CNT(PROC_CNT)) d(
 	.start(START),
