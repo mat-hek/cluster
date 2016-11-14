@@ -1,6 +1,6 @@
-parameter SIZE = 16;
-parameter WORD_SIZE = 16;
-parameter PAGE_SIZE = 4;
+localparam SIZE = 16;
+localparam WORD_SIZE = 16;
+localparam PAGE_SIZE = 4;
 `define PAGES_COUNT (SIZE - PAGE_SIZE)
 
 module SHM #(

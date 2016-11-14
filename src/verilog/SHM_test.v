@@ -363,6 +363,14 @@ debouncer bt_clk
 	.bt_act(button_clk)
 );
 
+logic button_start;
+debouncer bt_strt
+(
+	.button(iKEY[0]),
+	.clk(iCLK_28),
+	.bt_act(button_start)
+);
+
 logic auto_clk;
 prescaler pres
 (
@@ -375,20 +383,66 @@ assign clk_switch = iSW[17];
 
 logic clock;
 assign clock = (clk_switch == 1'b0) ? button_clk : auto_clk;
+assign oLEDR[0] = clock;
 
-logic [1:0] action [0:0];
-logic [11:0] ptr [0:0];
-logic [15:0] shift [0:0];
-logic [15:0] data_in [0:0];
-logic [15:0] data_out [0:0];
+// mock proc memory
 
-SHM #(1) shm(
+
+
+Temp_proc_mem tpm(
+	.address_a(proc_mem_addr[0]),
+	.address_b(iSW[6:3]),
 	.clock(clock),
-	.action(action),
+	.data_a(proc_mem_data_in[0]),
+	.data_b(),
+	.wren_a(proc_mem_rw[0]),
+	.wren_b(0),
+	.q_a(proc_mem_data_out[0]),
+	.q_b(oLEDR[4:1])
+);
+
+// mock proc ports
+	
+	logic start;
+	assign start = iSW[15];
+	logic trigger[0:0];
+	assign trigger[0] = iSW[16];
+	logic ack[0:0];
+	logic [15:0] ptr[0:0];
+	assign ptr[0] = 0;
+	logic [15:0] proc_mem_data_in[0:0];
+	logic [15:0] proc_mem_data_out[0:0];
+	logic [15:0] proc_mem_addr[0:0];
+	logic proc_mem_rw[0:0];
+	logic [15:0] copy_start[0:0];
+	assign copy_start[0] = 0;
+	logic [15:0] copy_length[0:0];
+	assign copy_length[0] = 10;
+	logic [11:0] ptr_out[0:0];
+	logic [15:0] cn_dbg_addr;
+	assign cn_dbg_addr[3:0] = iSW[3:0];
+	logic [15:0] cn_dbg_data_out;
+	assign oLEDG[3:0] = cn_dbg_data_out[3:0];
+
+DMA #(1) dma(
+	.start(start),
+	.clock(clock),
+	.mem_clock(clock),
+	.trigger(trigger),
+	.ack(ack),
 	.ptr(ptr),
-	.shift(shift),
-	.data_in(data_in),
-	.data_out(data_out)
+	.proc_mem_data_in(proc_mem_data_in),
+	.proc_mem_data_out(proc_mem_data_out),
+	.proc_mem_addr(proc_mem_addr),
+	.proc_mem_rw(proc_mem_rw),
+	.copy_start(copy_start),
+	.copy_length(copy_length),
+	.ptr_out(ptr_out),
+	.cn_dbg_addr,
+	.cn_dbg_data_out,
+	.dbg1(oLEDR[17:14]),
+	.dbg2(oLEDR[13:10]),
+	.run_dbg(oLEDG[7])
 );
 
 endmodule
