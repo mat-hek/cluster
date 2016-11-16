@@ -1,7 +1,7 @@
-localparam PROCSIZE = 16;
-localparam SIZE = 16;
+localparam PROCSIZE = 4;
+localparam SIZE = 4;
 localparam WORD_SIZE = 16;
-localparam PAGE_SIZE = 4;
+localparam PAGE_SIZE = 2;
 `define PAGES_COUNT (SIZE - PAGE_SIZE)
 
 module DMA #(
@@ -22,13 +22,15 @@ module DMA #(
 	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
 	input [SIZE-1:0] cn_dbg_addr,
 	output [WORD_SIZE-1:0] cn_dbg_data_out,
-	output [16:0] dbg1,
-	output [16:0] dbg2,
+	output [15:0] dbg1,
+	output [15:0] dbg2,
+	output [15:0] dbg3,
 	output run_dbg
 );
 
 assign dbg1 = cn_addr;
 assign dbg2 = proc_mem_addr[current_proc];
+assign dbg3 = pl_data_out;
 assign run_dbg = start;
 
 // actions
@@ -108,16 +110,13 @@ logic [1:0] update_next_page;
 logic [SIZE-1:0] already_read;
 task next_shm_addr;
 	begin
-	/*
-		if (cn_addr % PAGE_SIZE**2 == PAGE_SIZE-1) begin // last word of page
+		if (cn_addr % PAGE_SIZE**2 == PAGE_SIZE**2-1) begin // last word of page
 			cn_addr <= next_page << PAGE_SIZE;
 			pl_addr <= next_page;
 			pl_rw <= `READ;
 			update_next_page <= 1;
-		end else begin
-	*/
+		end else
 			cn_addr <= cn_addr + 1;
-	//	end
 	end
 endtask
 
@@ -131,26 +130,28 @@ end
 always@(posedge clock) begin
 	if (start) begin
 		stage <= `LISTEN;
+		next_page <= 1;
 		writing_to_shm <= 0;
 		run <= 1;
 	end else if (run) begin
-		/*
 		case(update_next_page)
-			1: update_next_page <= 2;
+			1: begin
+				update_next_page <= 2;
+				end
 			2: begin
 				update_next_page <= 0;
 				next_page <= pl_data_out;
 			end
 		endcase
-		*/
 		case(stage)
 			`LISTEN: begin
-				//if(last_trigger[current_proc] ^ trigger[current_proc]) begin
+				if(last_trigger[current_proc] ^ trigger[current_proc]) begin
+					last_trigger[current_proc] = trigger[current_proc];
 					proc_mem_rw[current_proc] <= `READ;
 					proc_mem_addr[current_proc] <= copy_start[current_proc];
 					stage <= `COPY;
 					already_read <= 0;
-				//end else
+				end //else
 					//move_to_next_proc();
 			end
 			`COPY: begin
@@ -161,7 +162,10 @@ always@(posedge clock) begin
 					if (already_read == 1) begin					
 						writing_to_shm <= 1;
 						cn_rw <= `WRITE;
-						cn_addr <= ptr[current_proc];
+						cn_addr <= next_page << PAGE_SIZE;
+						pl_addr <= next_page;
+						pl_rw <= `READ;
+						update_next_page <= 1;
 					end
 					if (already_read > 1) begin
 						next_shm_addr();
@@ -171,6 +175,7 @@ always@(posedge clock) begin
 					writing_to_shm <= 0;
 					cn_rw <= `READ;
 					stage <= `LISTEN;
+					//move_to_next_proc
 				end
 			end
 		endcase
