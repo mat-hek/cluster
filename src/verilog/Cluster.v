@@ -445,7 +445,7 @@ dek7seg decSTACK_2
 // Structural coding
 //=============================================================================
 
-logic [7:0] REGS [0:7][0:PROC_CNT];
+logic [7:0] REGS [0:7][0:PROC_CNT-1];
 
 
 logic [7:0] CURRENT_REG;
@@ -453,9 +453,9 @@ always@(CURRENT_REG_NO) begin
 	CURRENT_REG <= REGS[CURRENT_REG_NO][CURRENT_PROC_NO];
 end
 
-logic [7:0] CODE_DBG_ADDRESS [0:PROC_CNT];
-logic [7:0] MEM_DBG_ADDRESS [0:PROC_CNT];
-logic [7:0] STACK_DBG_ADDRESS [0:PROC_CNT];
+logic [7:0] CODE_DBG_ADDRESS [0:PROC_CNT-1];
+logic [7:0] MEM_DBG_ADDRESS [0:PROC_CNT-1];
+logic [7:0] STACK_DBG_ADDRESS [0:PROC_CNT-1];
 
 always@(CURRENT_MEM_TYPE or CURRENT_MEM_ADDR or CURRENT_PROC_NO) begin
 	case(CURRENT_MEM_TYPE)
