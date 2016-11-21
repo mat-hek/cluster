@@ -22,15 +22,19 @@ module DMA #(
 	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
 	input [SIZE-1:0] cn_dbg_addr,
 	output [WORD_SIZE-1:0] cn_dbg_data_out,
+	input [`PAGES_COUNT-1:0] pl_dbg_addr,
+	output [PAGE_SIZE-1:0] pl_dbg_data_out,
 	output [15:0] dbg1,
 	output [15:0] dbg2,
 	output [15:0] dbg3,
+	output [15:0] dbg4,
 	output run_dbg
 );
 
 assign dbg1 = cn_addr;
 assign dbg2 = proc_mem_addr[current_proc];
-assign dbg3 = pl_data_out;
+assign dbg3 = next_page;
+assign dbg4 = pl_data_out;
 assign run_dbg = start;
 
 // actions
@@ -52,14 +56,14 @@ logic [`PAGES_COUNT-1:0] pl_data_out2;
 
 SHM_pages_list pages_list(
 	.address_a(pl_addr),
-	.address_b(pl_addr2),
+	.address_b(pl_dbg_addr),
 	.clock(mem_clock),
 	.data_a(pl_data_in),
-	.data_b(pl_data_in2),
+	.data_b(/*pl_dbg_data_in*/),
 	.wren_a(pl_rw),
-	.wren_b(pl_rw2),
+	.wren_b(0 /*pl_dbg_rw*/),
 	.q_a(pl_data_out),
-	.q_b(pl_data_out2)
+	.q_b(pl_dbg_data_out)
 );
 
 // content
@@ -86,9 +90,10 @@ SHM_content content(
 logic [$clog2(PROC_CNT)-1:0] current_proc;
 logic last_trigger [0:PROC_CNT-1];
 
-logic stage;
+logic [1:0] stage;
 `define LISTEN 0
-`define COPY 1
+`define STORE 1
+`define LOAD 2
 
 logic run;
 
@@ -111,8 +116,8 @@ logic [SIZE-1:0] already_read;
 task next_shm_addr;
 	begin
 		if (cn_addr % PAGE_SIZE**2 == PAGE_SIZE**2-1) begin // last word of page
-			cn_addr <= next_page << PAGE_SIZE;
-			pl_addr <= next_page;
+			cn_addr <= pl_data_out << PAGE_SIZE;
+			pl_addr <= pl_data_out;
 			pl_rw <= `READ;
 			update_next_page <= 1;
 		end else
@@ -135,10 +140,10 @@ always@(posedge clock) begin
 		run <= 1;
 	end else if (run) begin
 		case(update_next_page)
-			1: begin
-				update_next_page <= 2;
+			1, 2: begin
+				update_next_page <= update_next_page + 1;
 				end
-			2: begin
+			3: begin
 				update_next_page <= 0;
 				next_page <= pl_data_out;
 			end
@@ -147,14 +152,47 @@ always@(posedge clock) begin
 			`LISTEN: begin
 				if(last_trigger[current_proc] ^ trigger[current_proc]) begin
 					last_trigger[current_proc] = trigger[current_proc];
-					proc_mem_rw[current_proc] <= `READ;
-					proc_mem_addr[current_proc] <= copy_start[current_proc];
-					stage <= `COPY;
+					case (action)
+						`WRITE: begin
+							proc_mem_rw[current_proc] <= `READ;
+							proc_mem_addr[current_proc] <= copy_start[current_proc];
+							stage <= `STORE;
+						end
+						`READ: begin
+							cn_rw <= `READ;
+							cn_addr <= ptr[current_proc];
+							stage <= `LOAD;
+						end
+					endcase	
 					already_read <= 0;
 				end //else
 					//move_to_next_proc();
 			end
-			`COPY: begin
+			`LOAD: begin
+				if (already_read < copy_length[current_proc]) begin
+					proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
+				end
+				if (already_read < copy_length[current_proc] + 2) begin
+					if (already_read == 1) begin					
+						writing_to_shm <= 1;
+						cn_rw <= `WRITE;
+						cn_addr <= next_page << PAGE_SIZE;
+						pl_addr <= next_page;
+						pl_rw <= `READ;
+						update_next_page <= 1;
+					end
+					if (already_read > 1) begin
+						next_shm_addr();
+					end
+					already_read <= already_read + 1;
+				end else begin
+					writing_to_shm <= 0;
+					cn_rw <= `READ;
+					stage <= `LISTEN;
+					//move_to_next_proc
+				end
+			end
+			`STORE: begin
 				if (already_read < copy_length[current_proc]) begin
 					proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
 				end

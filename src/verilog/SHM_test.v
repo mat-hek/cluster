@@ -383,6 +383,18 @@ dek7seg dec_dbg3(
 	.data_out(oHEX0_D)
 );
 
+dek7seg dec_dbg4(
+	.data_in(dbg4),
+	.data_out(oHEX2_D)
+);
+
+dek7seg pl_data_out_disp(
+	.data_in(pl_dbg_data_out),
+	.data_out(oHEX1_D)
+);
+
+logic [1:0] pl_dbg_data_out;
+
 logic clk_switch;
 assign clk_switch = iSW[17];
 
@@ -429,6 +441,7 @@ Temp_proc_mem tpm(
 	logic [15:0] cn_dbg_data_out;
 	assign oLEDG[3:0] = cn_dbg_data_out[3:0];
 	logic [15:0] dbg3;
+	logic [15:0] dbg4;
 
 DMA #(1) dma(
 	.start(start),
@@ -444,11 +457,14 @@ DMA #(1) dma(
 	.copy_start(copy_start),
 	.copy_length(copy_length),
 	.ptr_out(ptr_out),
-	.cn_dbg_addr,
-	.cn_dbg_data_out,
+	.cn_dbg_addr(cn_dbg_addr),
+	.cn_dbg_data_out(cn_dbg_data_out),
+	.pl_dbg_addr(iSW[10:9]),
+	.pl_dbg_data_out(pl_dbg_data_out),
 	.dbg1(oLEDR[13:10]),
 	.dbg2(oLEDR[17:14]),
 	.dbg3(dbg3),
+	.dbg4(dbg4),
 	.run_dbg(oLEDR[8])
 );
 
