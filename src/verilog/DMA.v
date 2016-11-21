@@ -42,6 +42,10 @@ assign run_dbg = start;
 `define WRITE 1
 
 
+logic action;
+assign action = `READ;
+
+
 // pages list
 
 logic [`PAGES_COUNT-1:0] pl_addr;
@@ -125,9 +129,9 @@ task next_shm_addr;
 	end
 endtask
 
-logic writing_to_shm;
+logic copying;
 
-always@(current_proc, writing_to_shm) if(writing_to_shm) begin
+always@(current_proc, copying) if(copying) begin
 	cn_data_in <= proc_mem_data_out[current_proc];
 	proc_mem_data_in[current_proc] <= cn_data_out;
 end
@@ -136,7 +140,7 @@ always@(posedge clock) begin
 	if (start) begin
 		stage <= `LISTEN;
 		next_page <= 1;
-		writing_to_shm <= 0;
+		copying <= 0;
 		run <= 1;
 	end else if (run) begin
 		case(update_next_page)
@@ -161,6 +165,9 @@ always@(posedge clock) begin
 						`READ: begin
 							cn_rw <= `READ;
 							cn_addr <= ptr[current_proc];
+							update_next_page <= 1;
+							pl_rw <= `READ;
+							pl_addr <= ptr[current_proc] >> PAGE_SIZE;
 							stage <= `LOAD;
 						end
 					endcase	
@@ -170,35 +177,33 @@ always@(posedge clock) begin
 			end
 			`LOAD: begin
 				if (already_read < copy_length[current_proc]) begin
-					proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
+					next_shm_addr();
 				end
 				if (already_read < copy_length[current_proc] + 2) begin
 					if (already_read == 1) begin					
-						writing_to_shm <= 1;
-						cn_rw <= `WRITE;
-						cn_addr <= next_page << PAGE_SIZE;
-						pl_addr <= next_page;
-						pl_rw <= `READ;
-						update_next_page <= 1;
+						copying <= 1;
+						proc_mem_rw[current_proc] <= `WRITE;
+						proc_mem_addr[current_proc] <= copy_start[current_proc];
 					end
 					if (already_read > 1) begin
-						next_shm_addr();
+						proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
 					end
 					already_read <= already_read + 1;
 				end else begin
-					writing_to_shm <= 0;
-					cn_rw <= `READ;
+					copying <= 0;
+					proc_mem_rw[current_proc] <= `READ;
 					stage <= `LISTEN;
 					//move_to_next_proc
 				end
 			end
+			/*
 			`STORE: begin
 				if (already_read < copy_length[current_proc]) begin
 					proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
 				end
 				if (already_read < copy_length[current_proc] + 2) begin
 					if (already_read == 1) begin					
-						writing_to_shm <= 1;
+						copying <= 1;
 						cn_rw <= `WRITE;
 						cn_addr <= next_page << PAGE_SIZE;
 						pl_addr <= next_page;
@@ -210,12 +215,13 @@ always@(posedge clock) begin
 					end
 					already_read <= already_read + 1;
 				end else begin
-					writing_to_shm <= 0;
+					copying <= 0;
 					cn_rw <= `READ;
 					stage <= `LISTEN;
 					//move_to_next_proc
 				end
 			end
+			*/
 		endcase
 	end
 end
