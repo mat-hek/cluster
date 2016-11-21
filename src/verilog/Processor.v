@@ -1,12 +1,11 @@
 module Processor (
 	input proc_clock,
 	input mem_clock,
-	//inout START,
 	output RUN,
-	/*
-	inout DISP_SPAWN,
-	inout [7:0] DISP_ADDR,
-	*/
+	input START,
+	input [7:0] START_ADDR,
+	output TRIGGER_SPAWN,
+	output [7:0] SPAWN_ADDR,
 	input [7:0] MEM_DBG_ADDRESS,
 	output [7:0] MEM_DBG_OUT,
 	input [7:0] STACK_DBG_ADDRESS,
@@ -40,7 +39,7 @@ module Processor (
 `define ADD 		4'b0110
 `define SUB 		4'b0111
 `define CMP 		4'b1000
-`define TEST 		4'b1001
+`define SPAWN 		4'b1001
 `define LEA 		4'b1010
 `define SHX 		4'b1011
 	`define SHR 	1'b0
@@ -167,11 +166,10 @@ logic [1:0] STAGE;
 
 always@(posedge proc_clock) begin
 	if(START == 1) begin
-		START <= 0;
 		RUN <= 1;
 		STAGE <= 0;
 		SP <= 0;
-		IP <= 0;
+		IP <= START_ADDR;
 		O <= 0;
 		C <= 0;
 		Z <= 0;
@@ -332,12 +330,18 @@ always@(posedge proc_clock) begin
 						endcase
 					end
 
-					`TEST: begin
-						if(`TYPE == 1)
-							Z <= ~|(REGS[`REG_A] & `NUM);
-						else
-							Z <= ~|(REGS[`REG_A] & REGS[`REG_B]);
-						STAGE <= 0;
+					`SPAWN: begin
+						case(STAGE)
+							1: begin
+								SPAWN_ADDR <= `NUM;
+								TRIGGER_SPAWN <= 1;
+								STAGE <= STAGE + 1;
+							end
+							2: begin
+								TRIGGER_SPAWN <= 0;
+								STAGE <= 0;
+							end
+						endcase
 					end
 
 					`LEA: begin

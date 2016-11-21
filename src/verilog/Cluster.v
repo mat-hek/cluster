@@ -473,17 +473,19 @@ always@(CURRENT_MEM_TYPE or CURRENT_MEM_ADDR or CURRENT_PROC_NO) begin
 end
 
 logic proc_running[0:PROC_CNT-1];
-logic proc_start[0:PROC_CNT-1];
 logic proc_spawn[0:PROC_CNT-1];
-logic [7:0] proc_disp_addr[0:PROC_CNT-1];
+logic [7:0] proc_spawn_addr[0:PROC_CNT-1];
+logic proc_start[0:PROC_CNT-1];
+logic [7:0] proc_start_addr[0:PROC_CNT-1];
 
 Dispatcher #(.PROC_CNT(PROC_CNT)) d(
 	.start(~START),
 	.clock(clock),
 	.memory_clock(iCLK_28),
 	.proc_running(proc_running),
-	.proc_addr(proc_disp_addr),
+	.proc_spawn_addr(proc_spawn_addr),
 	.proc_onspawn(proc_spawn),
+	.proc_start_addr(proc_start_addr),
 	.proc_start(proc_start)
 );
 
@@ -493,10 +495,11 @@ generate
 		Processor proc(
 			.proc_clock(clock),
 			.mem_clock(iCLK_28),
-			.START(proc_start[i]),
 			.RUN(proc_running[i]),
-			.DISP_SPAWN(proc_spawn[i]),
-			.DISP_ADDR(proc_disp_addr[i]),
+			.START(proc_start[i]),
+			.START_ADDR(proc_start_addr[i]),
+			.TRIGGER_SPAWN(proc_spawn[i]),
+			.SPAWN_ADDR(proc_spawn_addr[i]),
 			.CODE_DBG_ADDRESS(CODE_DBG_ADDRESS[i]),
 			.CODE_DBG_OUT(CODE_OUTS[i]),
 			.MEM_DBG_ADDRESS(MEM_DBG_ADDRESS[i]),
