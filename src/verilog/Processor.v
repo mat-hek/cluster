@@ -1,14 +1,19 @@
-module processor (
+module Processor (
 	input proc_clock,
 	input mem_clock,
-	input START,
+	//inout START,
+	output RUN,
+	/*
+	inout DISP_SPAWN,
+	inout [7:0] DISP_ADDR,
+	*/
 	input [7:0] MEM_DBG_ADDRESS,
 	output [7:0] MEM_DBG_OUT,
 	input [7:0] STACK_DBG_ADDRESS,
 	output [7:0] STACK_DBG_OUT,
 	input [7:0] CODE_DBG_ADDRESS,
 	output [15:0] CODE_DBG_OUT,
-	output reg [7:0] 	REGS [0:7]
+	output [7:0] 	REGS [0:7]
 );
 
 `define HLT 		4'b0000
@@ -155,14 +160,14 @@ logic [7:0] result;
 logic jump;
 
 logic [1:0] STAGE;
-logic RUN;
 
 //=============================================================================
 // Structural coding
 //=============================================================================
 
-always@(posedge proc_clock, negedge START) begin
-	if(START == 0) begin
+always@(posedge proc_clock) begin
+	if(START == 1) begin
+		START <= 0;
 		RUN <= 1;
 		STAGE <= 0;
 		SP <= 0;

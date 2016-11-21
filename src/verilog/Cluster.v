@@ -355,11 +355,9 @@ inout			GPIO_CLKOUT_P1;         //	GPIO Connection 1 Clock Output 1
 // REG/logic declarations
 //=============================================================================
 
-// IP -> oLEDR[7:0], {O, C, Z, N} -> oLEDR[17:14], REG -> oLEDG[7:0]
-
 localparam  PROC_CNT = 2;
 
-wire START;
+logic START;
 debouncer start
 (
 	.button(iKEY[1]),
@@ -367,7 +365,7 @@ debouncer start
 	.bt_act(START)
 );
 
-wire button_clk;
+logic button_clk;
 debouncer bt_clk
 (
 	.button(iKEY[0]),
@@ -375,17 +373,17 @@ debouncer bt_clk
 	.bt_act(button_clk)
 );
 
-wire auto_clk;
+logic auto_clk;
 prescaler pres
 (
 	.clkin(iCLK_28),
 	.clkout(auto_clk)
 );
 
-wire clk_switch;
+logic clk_switch;
 assign clk_switch = iSW[17];
 
-wire clock;
+logic clock;
 assign clock = (clk_switch == 1'b0) ? button_clk : auto_clk;
 
 logic CURRENT_PROC_NO;
@@ -397,9 +395,15 @@ assign CURRENT_MEM_TYPE = iSW[9:8];
 logic CURRENT_MEM_ADDR;
 assign CURRENT_MEM_ADDR = iSW[7:0];
 
+logic [15:0] CODE_OUTS [0:PROC_CNT-1];
+logic [7:0] MEM_OUTS [0:PROC_CNT-1];
+logic [7:0] STACK_OUTS [0:PROC_CNT-1];
 logic [15:0] CODE_OUT;
+assign CODE_OUT = CODE_OUTS[CURRENT_PROC_NO];
 logic [7:0] MEM_OUT;
+assign MEM_OUT = MEM_OUTS[CURRENT_PROC_NO];
 logic [7:0] STACK_OUT;
+assign STACK_OUT = STACK_OUTS[CURRENT_PROC_NO];
 
 dek7seg decCODE_1
 (
@@ -468,18 +472,40 @@ always@(CURRENT_MEM_TYPE or CURRENT_MEM_ADDR or CURRENT_PROC_NO) begin
 	endcase
 end
 
+logic proc_running[0:PROC_CNT-1];
+logic proc_start[0:PROC_CNT-1];
+logic proc_spawn[0:PROC_CNT-1];
+logic [7:0] proc_disp_addr[0:PROC_CNT-1];
+
+Dispatcher #(.PROC_CNT(PROC_CNT)) d(
+	.start(~START),
+	.clock(clock),
+	.memory_clock(iCLK_28),
+	.proc_running(proc_running),
+	.proc_addr(proc_disp_addr),
+	.proc_onspawn(proc_spawn),
+	.proc_start(proc_start)
+);
+
 genvar i;
 generate
   for (i = 0; i < PROC_CNT; i=i+1) begin:gen_procs
-		processor proc(
+		Processor proc(
 			.proc_clock(clock),
 			.mem_clock(iCLK_28),
-			.START(START),
+			.START(proc_start[i]),
+			.RUN(proc_running[i]),
+			.DISP_SPAWN(proc_spawn[i]),
+			.DISP_ADDR(proc_disp_addr[i]),
 			.CODE_DBG_ADDRESS(CODE_DBG_ADDRESS[i]),
+			.CODE_DBG_OUT(CODE_OUTS[i]),
 			.MEM_DBG_ADDRESS(MEM_DBG_ADDRESS[i]),
-			.STACK_DBG_ADDRESS(STACK_DBG_ADDRESS[i])
+			.MEM_DBG_OUT(MEM_OUTS[i]),
+			.STACK_DBG_ADDRESS(STACK_DBG_ADDRESS[i]),
+			.STACK_DBG_OUT(STACK_OUTS[i])
 		);
   end
 endgenerate
+
 
 endmodule

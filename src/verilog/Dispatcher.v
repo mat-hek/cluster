@@ -4,9 +4,12 @@ module Dispatcher #(
 	input start,
 	input clock,
 	input memory_clock,
+	input proc_running[0:PROC_CNT-1],
+	/*
 	inout [7:0] proc_addr[0:PROC_CNT-1],
 	inout proc_onspawn[0:PROC_CNT-1],
-	inout [0:PROC_CNT-1] proc_start
+	inout proc_start[0:PROC_CNT-1]
+	*/
 );
 
 logic [7:0] q_in;
@@ -36,7 +39,7 @@ always@(posedge clock, posedge start) begin
 	if(start == 1) begin
 		current_proc <= 0;
 		proc_addr[PROC_CNT-1] <= 0;
-		proc_start <= 1;
+		proc_start[PROC_CNT-1] <= 1;
 		onspawn_stage <= 0;
 		onready_stage <= 0;
 		free_proc_count <= PROC_CNT-1;
@@ -53,12 +56,12 @@ always@(posedge clock, posedge start) begin
 				q_enqueue <= 1;
 				q_in <= proc_addr[current_proc];
 				onspawn_stage <= 1;
-			end else if (!proc_start[current_proc]) begin
+			end else if (!proc_running[current_proc]) begin
 				if (!q_empty) begin
 					q_dequeue <= 1;
 					onready_stage <= 1;
 				end else
-					free_proc_count++;
+					free_proc_count <= free_proc_count + 1;
 			end else
 				current_proc <= (current_proc + 1) % PROC_CNT;
 		end
