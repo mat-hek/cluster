@@ -434,7 +434,7 @@ Temp_proc_mem tpm(
 	logic [3:0] copy_start[0:0];
 	assign copy_start[0] = 1;
 	logic [3:0] copy_length[0:0];
-	assign copy_length[0] = 6;
+	assign copy_length[0] = 0;
 	logic [1:0] ptr_out[0:0];
 	logic [3:0] cn_dbg_addr;
 	assign cn_dbg_addr[3:0] = iSW[3:0];
@@ -442,6 +442,8 @@ Temp_proc_mem tpm(
 	assign oLEDG[3:0] = cn_dbg_data_out[3:0];
 	logic [15:0] dbg3;
 	logic [15:0] dbg4;
+	logic action[0:0];
+	assign action[0] = iSW[13];
 
 DMA #(1) dma(
 	.start(start),
@@ -449,6 +451,7 @@ DMA #(1) dma(
 	.mem_clock(clock),
 	.trigger(trigger),
 	.ack(ack),
+	.action(action),
 	.ptr(ptr),
 	.proc_mem_data_in(proc_mem_data_in),
 	.proc_mem_data_out(proc_mem_data_out),

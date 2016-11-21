@@ -12,6 +12,7 @@ module DMA #(
 	input start,
 	input trigger [0:PROC_CNT-1],
 	output ack [0:PROC_CNT-1],
+	input action [0:PROC_CNT-1],
 	input [SIZE-1:0] ptr [0:PROC_CNT-1],
 	output [WORD_SIZE-1:0] proc_mem_data_in [0:PROC_CNT-1],
 	input [WORD_SIZE-1:0] proc_mem_data_out [0:PROC_CNT-1],
@@ -40,10 +41,6 @@ assign run_dbg = start;
 // actions
 `define READ 0
 `define WRITE 1
-
-
-logic action;
-assign action = `READ;
 
 
 // pages list
@@ -156,7 +153,7 @@ always@(posedge clock) begin
 			`LISTEN: begin
 				if(last_trigger[current_proc] ^ trigger[current_proc]) begin
 					last_trigger[current_proc] = trigger[current_proc];
-					case (action)
+					case (action[current_proc])
 						`WRITE: begin
 							proc_mem_rw[current_proc] <= `READ;
 							proc_mem_addr[current_proc] <= copy_start[current_proc];
@@ -170,7 +167,7 @@ always@(posedge clock) begin
 							pl_addr <= ptr[current_proc] >> PAGE_SIZE;
 							stage <= `LOAD;
 						end
-					endcase	
+					endcase
 					already_read <= 0;
 				end //else
 					//move_to_next_proc();
@@ -196,7 +193,6 @@ always@(posedge clock) begin
 					//move_to_next_proc
 				end
 			end
-			/*
 			`STORE: begin
 				if (already_read < copy_length[current_proc]) begin
 					proc_mem_addr[current_proc] <= proc_mem_addr[current_proc] + 1;
@@ -221,7 +217,6 @@ always@(posedge clock) begin
 					//move_to_next_proc
 				end
 			end
-			*/
 		endcase
 	end
 end
