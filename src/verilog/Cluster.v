@@ -388,11 +388,11 @@ assign clock = (clk_switch == 1'b0) ? button_clk : auto_clk;
 
 logic CURRENT_PROC_NO;
 assign CURRENT_PROC_NO = iSW[13];
-logic CURRENT_REG_NO;
+logic [2:0] CURRENT_REG_NO;
 assign CURRENT_REG_NO = iSW[16:14];
-logic CURRENT_MEM_TYPE;
+logic [2:0] CURRENT_MEM_TYPE;
 assign CURRENT_MEM_TYPE = iSW[9:8];
-logic CURRENT_MEM_ADDR;
+logic [7:0] CURRENT_MEM_ADDR;
 assign CURRENT_MEM_ADDR = iSW[7:0];
 
 logic [15:0] CODE_OUTS [0:PROC_CNT-1];
@@ -449,13 +449,15 @@ dek7seg decSTACK_2
 // Structural coding
 //=============================================================================
 
-logic [7:0] REGS [0:7][0:PROC_CNT-1];
+logic [7:0] REGS [0:PROC_CNT-1][0:7];
 
 
 logic [7:0] CURRENT_REG;
 always@(CURRENT_REG_NO) begin
-	CURRENT_REG <= REGS[CURRENT_REG_NO][CURRENT_PROC_NO];
+	CURRENT_REG <= REGS[CURRENT_PROC_NO][CURRENT_REG_NO];
 end
+
+assign oLEDG[7:0] = CURRENT_REG;
 
 logic [7:0] CODE_DBG_ADDRESS [0:PROC_CNT-1];
 logic [7:0] MEM_DBG_ADDRESS [0:PROC_CNT-1];
@@ -477,16 +479,26 @@ logic proc_spawn[0:PROC_CNT-1];
 logic [7:0] proc_spawn_addr[0:PROC_CNT-1];
 logic proc_start[0:PROC_CNT-1];
 logic [7:0] proc_start_addr[0:PROC_CNT-1];
+logic [7:0] proc_ip[0:PROC_CNT-1];
+assign oLEDR[7:0] = proc_ip[CURRENT_PROC_NO];
+
+assign oLEDR[16] = proc_running[0];
+assign oLEDR[17] = proc_running[1];
+assign oLEDR[13] = proc_start[1];
+assign oLEDR[12] = proc_start[0];
 
 Dispatcher #(.PROC_CNT(PROC_CNT)) d(
-	.start(~START),
+	.start(START),
 	.clock(clock),
 	.memory_clock(iCLK_28),
 	.proc_running(proc_running),
 	.proc_spawn_addr(proc_spawn_addr),
 	.proc_onspawn(proc_spawn),
 	.proc_start_addr(proc_start_addr),
-	.proc_start(proc_start)
+	.proc_start(proc_start),
+	.dbg_1(oLEDR[15]),
+	.dbg_2(oLEDR[14]),
+	.dbg_3(oLEDR[11])
 );
 
 genvar i;
@@ -505,7 +517,9 @@ generate
 			.MEM_DBG_ADDRESS(MEM_DBG_ADDRESS[i]),
 			.MEM_DBG_OUT(MEM_OUTS[i]),
 			.STACK_DBG_ADDRESS(STACK_DBG_ADDRESS[i]),
-			.STACK_DBG_OUT(STACK_OUTS[i])
+			.STACK_DBG_OUT(STACK_OUTS[i]),
+			.REGS(REGS[i]),
+			.IP(proc_ip[i])
 		);
   end
 endgenerate

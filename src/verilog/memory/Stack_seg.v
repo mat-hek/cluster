@@ -69,7 +69,7 @@ module stack_seg (
 	wire [7:0] sub_wire1;
 	wire [7:0] q_a = sub_wire0[7:0];
 	wire [7:0] q_b = sub_wire1[7:0];
-/*
+
 	altsyncram	altsyncram_component (
 				.wren_a (wren_a),
 				.clock0 (clock),
@@ -120,7 +120,7 @@ module stack_seg (
 		altsyncram_component.width_byteena_b = 1,
 		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK0";
 
-		*/
+		
 
 endmodule
 

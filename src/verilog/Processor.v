@@ -12,7 +12,8 @@ module Processor (
 	output [7:0] STACK_DBG_OUT,
 	input [7:0] CODE_DBG_ADDRESS,
 	output [15:0] CODE_DBG_OUT,
-	output [7:0] 	REGS [0:7]
+	output [7:0] REGS [0:7],
+	output [7:0] IP
 );
 
 `define HLT 		4'b0000
@@ -76,8 +77,6 @@ logic N;		// negative/sign flag
 
 
 logic [15:0] IR; 	// instruction register
-
-logic  [7:0]	 IP;					// instruction pointer
 
 logic [15:0]  CODE_DATA_OUT;
 logic [15:0]  CODE_IN;
@@ -331,17 +330,9 @@ always@(posedge proc_clock) begin
 					end
 
 					`SPAWN: begin
-						case(STAGE)
-							1: begin
-								SPAWN_ADDR <= `NUM;
-								TRIGGER_SPAWN <= 1;
-								STAGE <= STAGE + 1;
-							end
-							2: begin
-								TRIGGER_SPAWN <= 0;
-								STAGE <= 0;
-							end
-						endcase
+						SPAWN_ADDR <= `NUM;
+						TRIGGER_SPAWN <= ~TRIGGER_SPAWN;
+						STAGE <= 0;
 					end
 
 					`LEA: begin

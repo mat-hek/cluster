@@ -8,7 +8,10 @@ module Dispatcher #(
 	input [7:0] proc_spawn_addr[0:PROC_CNT-1],
 	input proc_onspawn[0:PROC_CNT-1],
 	output [7:0] proc_start_addr[0:PROC_CNT-1],
-	output proc_start[0:PROC_CNT-1]
+	output proc_start[0:PROC_CNT-1],
+	output dbg_1,
+	output dbg_2,
+	output dbg_3
 );
 
 logic [7:0] q_in;
@@ -28,14 +31,17 @@ Dispatcher_queue q(
 	.q(q_out)
 );
 
-logic [0:$clog2(PROC_CNT)-1] current_proc;
-logic [0:$clog2(PROC_CNT)-1] free_proc_count;
+logic [0:1] current_proc;
+logic [0:1] free_proc_count;
 logic onspawn_stage;
 logic onready_stage;
 logic run;
-
-always@(posedge clock, posedge start) begin
-	if(start == 1) begin
+assign dbg_1 = run;
+logic proc_spawn_trigger_state[0:PROC_CNT-1];
+assign dbg_2 = start;
+assign dbg_3 = current_proc;
+always@(posedge clock) begin
+	if(start == 0) begin
 		current_proc <= 0;
 		proc_start_addr[PROC_CNT-1] <= 0;
 		proc_start[PROC_CNT-1] <= 1;
@@ -44,14 +50,15 @@ always@(posedge clock, posedge start) begin
 		free_proc_count <= PROC_CNT-1;
 		run <= 1;
 	end else if (run) begin
+		proc_start[(PROC_CNT+current_proc-1)%PROC_CNT] <= 0;
 		if (current_proc == 0) begin
-			if (free_proc_count == PROC_CNT)
-				run <= 0;
+			// if (free_proc_count == PROC_CNT)
+				// run <= 0;
 			free_proc_count <= 0;
 		end
 		if (onspawn_stage == 0 && onready_stage == 0) begin
-			proc_start[current_proc] <= 0;
-			if (proc_onspawn[current_proc]) begin
+			if (proc_onspawn[current_proc] != proc_spawn_trigger_state[current_proc]) begin
+				proc_spawn_trigger_state[current_proc] = proc_onspawn[current_proc];
 				q_enqueue <= 1;
 				q_in <= proc_spawn_addr[current_proc];
 				onspawn_stage <= 1;
@@ -59,18 +66,16 @@ always@(posedge clock, posedge start) begin
 				if (!q_empty) begin
 					q_dequeue <= 1;
 					onready_stage <= 1;
-				end else
+				end else begin
 					free_proc_count <= free_proc_count + 1;
+					current_proc <= (current_proc + 1) % PROC_CNT;
+				end
 			end else
 				current_proc <= (current_proc + 1) % PROC_CNT;
 		end
 		if (onspawn_stage == 1) begin
-			if (proc_onspawn[current_proc])
-				q_in <= proc_spawn_addr[current_proc];
-			else begin
-				q_enqueue <= 0;
-				onspawn_stage <= 0;
-			end
+			q_enqueue <= 0;
+			onspawn_stage <= 0;
 		end
 		if (onready_stage == 1) begin
 			proc_start_addr[current_proc] <= q_out;
