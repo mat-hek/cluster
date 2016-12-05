@@ -115,11 +115,12 @@ SHM_content #(SIZE, WORD_SIZE) content(
 logic [$clog2(PROC_CNT)-1:0] current_proc;
 logic last_trigger [0:PROC_CNT-1];
 
-logic [1:0] stage;
+logic [2:0] stage;
 `define LISTEN 0
 `define STORE 1
 `define LOAD 2
 `define WAIT 3
+`define FREE 4
 
 logic [1:0] wait_next_stage;
 logic [2:0] wait_time;
@@ -155,6 +156,7 @@ task next_shm_addr;
 endtask
 
 logic copying;
+logic [1:0] free_stage;
 
 always@(current_proc, copying) if(copying) begin
 	cn_data_in <= proc_mem_data_out[current_proc];
@@ -257,11 +259,29 @@ always@(posedge clock) begin
 					copying <= 0;
 					cn_rw <= `READ;
 					stage <= `LISTEN;
-					aep_addr <= ptr[current_proc] >> PAGE_SIZE;
-					aep_data_in <= cn_addr >> PAGE_SIZE;
-					aep_rw <= `WRITE;
+					if (ptr[current_proc] < 2**PAGE_SIZE) begin
+						aep_addr <= ptr[current_proc] >> PAGE_SIZE;
+						aep_data_in <= cn_addr >> PAGE_SIZE;
+						aep_rw <= `WRITE;
+					end
 					//move_to_next_proc
 				end
+			end
+			`FREE: begin
+				case(free_stage)
+					0: begin
+						aep_addr <= ptr[current_proc] >> PAGE_SIZE;
+						aep_rw <= `READ;
+						free_stage <= 1;
+						end
+					1: free_stage <= 2;
+					2: begin
+						pl_addr <= next_page;
+						pl_data_in <= aep_data_out;
+						free_stage <= 0;
+						stage <= `LISTEN;
+						end
+				endcase
 			end
 		endcase
 	end
