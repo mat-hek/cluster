@@ -426,7 +426,7 @@ Temp_proc_mem tpm(
 	assign trigger[0] = iSW[15];
 	logic ack[0:0];
 	logic [3:0] ptr[0:0];
-	assign ptr[0] = 'b100;
+	assign ptr[0] = 'b111;
 	logic [15:0] proc_mem_data_in[0:0];
 	logic [15:0] proc_mem_data_out[0:0];
 	logic [3:0] proc_mem_addr[0:0];
@@ -434,7 +434,7 @@ Temp_proc_mem tpm(
 	logic [3:0] copy_start[0:0];
 	assign copy_start[0] = 1;
 	logic [3:0] copy_length[0:0];
-	assign copy_length[0] = 0;
+	assign copy_length[0] = 3;
 	logic [1:0] ptr_out[0:0];
 	logic [3:0] cn_dbg_addr;
 	assign cn_dbg_addr[3:0] = iSW[3:0];

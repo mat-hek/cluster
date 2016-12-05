@@ -95,6 +95,10 @@ logic [1:0] stage;
 `define LISTEN 0
 `define STORE 1
 `define LOAD 2
+`define WAIT 3
+
+logic [1:0] wait_next_stage;
+logic [2:0] wait_time;
 
 logic run;
 
@@ -165,12 +169,22 @@ always@(posedge clock) begin
 							update_next_page <= 1;
 							pl_rw <= `READ;
 							pl_addr <= ptr[current_proc] >> PAGE_SIZE;
-							stage <= `LOAD;
+							if (ptr[current_proc] % PAGE_SIZE**2 >= PAGE_SIZE**2-2) begin
+								wait_time <= PAGE_SIZE**2 - ptr[current_proc] % PAGE_SIZE**2;
+								wait_next_stage <= `LOAD;
+								stage <= `WAIT;
+							end else
+								stage <= `LOAD;
 						end
 					endcase
 					already_read <= 0;
 				end //else
 					//move_to_next_proc();
+			end
+			`WAIT: begin
+				wait_time <= wait_time - 1;
+				if (wait_time <= 0)
+					stage <= wait_next_stage;
 			end
 			`LOAD: begin
 				if (already_read < copy_length[current_proc]) begin
