@@ -55,7 +55,7 @@ logic [`PAGES_COUNT-1:0] pl_data_out;
 logic [`PAGES_COUNT-1:0] pl_data_out2;
 
 
-SHM_pages_list pages_list(
+SHM_pages_list #(`PAGES_COUNT, PAGE_SIZE) pages_list(
 	.address_a(pl_addr),
 	.address_b(pl_dbg_addr),
 	.clock(mem_clock),
@@ -75,7 +75,7 @@ logic cn_rw;
 logic [WORD_SIZE-1:0] cn_data_out;
 
 
-SHM_content content(
+SHM_content #(SIZE, WORD_SIZE) content(
 	.address_a(cn_addr),
 	.address_b(cn_dbg_addr),
 	.clock(mem_clock),

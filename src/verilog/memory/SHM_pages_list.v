@@ -36,7 +36,10 @@
 // synopsys translate_off
 `timescale 1 ps / 1 ps
 // synopsys translate_on
-module SHM_pages_list (
+module SHM_pages_list #(
+	PAGES_COUNT,
+	PAGE_SIZE
+)(
 	address_a,
 	address_b,
 	clock,
@@ -47,15 +50,15 @@ module SHM_pages_list (
 	q_a,
 	q_b);
 
-	input	[11:0]  address_a;
-	input	[11:0]  address_b;
+	input	[PAGES_COUNT-1:0]  address_a;
+	input	[PAGES_COUNT-1:0]  address_b;
 	input	  clock;
-	input	[11:0]  data_a;
-	input	[11:0]  data_b;
+	input	[PAGE_SIZE-1:0]  data_a;
+	input	[PAGE_SIZE-1:0]  data_b;
 	input	  wren_a;
 	input	  wren_b;
-	output	[11:0]  q_a;
-	output	[11:0]  q_b;
+	output	[PAGE_SIZE-1:0]  q_a;
+	output	[PAGE_SIZE-1:0]  q_b;
 `ifndef ALTERA_RESERVED_QIS
 // synopsys translate_off
 `endif
@@ -66,10 +69,10 @@ module SHM_pages_list (
 // synopsys translate_on
 `endif
 
-	wire [11:0] sub_wire0;
-	wire [11:0] sub_wire1;
-	wire [11:0] q_a = sub_wire0[11:0];
-	wire [11:0] q_b = sub_wire1[11:0];
+	wire [PAGES_COUNT-1:0] sub_wire0;
+	wire [PAGES_COUNT-1:0] sub_wire1;
+	wire [PAGES_COUNT-1:0] q_a = sub_wire0[PAGES_COUNT-1:0];
+	wire [PAGES_COUNT-1:0] q_b = sub_wire1[PAGES_COUNT-1:0];
 
 	altsyncram	altsyncram_component (
 				.clock0 (clock),
@@ -105,8 +108,8 @@ module SHM_pages_list (
 		altsyncram_component.init_file = "../src/mif/shm_pages_list.mif",
 		altsyncram_component.intended_device_family = "Cyclone II",
 		altsyncram_component.lpm_type = "altsyncram",
-		altsyncram_component.numwords_a = 4096,
-		altsyncram_component.numwords_b = 4096,
+		altsyncram_component.numwords_a = 2**PAGES_COUNT,
+		altsyncram_component.numwords_b = 2**PAGES_COUNT,
 		altsyncram_component.operation_mode = "BIDIR_DUAL_PORT",
 		altsyncram_component.outdata_aclr_a = "NONE",
 		altsyncram_component.outdata_aclr_b = "NONE",
@@ -114,10 +117,10 @@ module SHM_pages_list (
 		altsyncram_component.outdata_reg_b = "CLOCK0",
 		altsyncram_component.power_up_uninitialized = "FALSE",
 		altsyncram_component.read_during_write_mode_mixed_ports = "OLD_DATA",
-		altsyncram_component.widthad_a = 12,
-		altsyncram_component.widthad_b = 12,
-		altsyncram_component.width_a = 12,
-		altsyncram_component.width_b = 12,
+		altsyncram_component.widthad_a = PAGES_COUNT,
+		altsyncram_component.widthad_b = PAGES_COUNT,
+		altsyncram_component.width_a = PAGE_SIZE,
+		altsyncram_component.width_b = PAGE_SIZE,
 		altsyncram_component.width_byteena_a = 1,
 		altsyncram_component.width_byteena_b = 1,
 		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK0";

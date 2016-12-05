@@ -36,7 +36,10 @@
 // synopsys translate_off
 `timescale 1 ps / 1 ps
 // synopsys translate_on
-module SHM_content (
+module SHM_content #(
+	SIZE,
+	WORD_SIZE
+)(
 	address_a,
 	address_b,
 	clock,
@@ -47,15 +50,15 @@ module SHM_content (
 	q_a,
 	q_b);
 
-	input	[14:0]  address_a;
-	input	[14:0]  address_b;
+	input	[SIZE-1:0]  address_a;
+	input	[SIZE-1:0]  address_b;
 	input	  clock;
-	input	[15:0]  data_a;
-	input	[15:0]  data_b;
+	input	[WORD_SIZE-1:0]  data_a;
+	input	[WORD_SIZE-1:0]  data_b;
 	input	  wren_a;
 	input	  wren_b;
-	output	[15:0]  q_a;
-	output	[15:0]  q_b;
+	output	[WORD_SIZE-1:0]  q_a;
+	output	[WORD_SIZE-1:0]  q_b;
 `ifndef ALTERA_RESERVED_QIS
 // synopsys translate_off
 `endif
@@ -66,10 +69,10 @@ module SHM_content (
 // synopsys translate_on
 `endif
 
-	wire [15:0] sub_wire0;
-	wire [15:0] sub_wire1;
-	wire [15:0] q_a = sub_wire0[15:0];
-	wire [15:0] q_b = sub_wire1[15:0];
+	wire [SIZE-1:0] sub_wire0;
+	wire [SIZE-1:0] sub_wire1;
+	wire [SIZE-1:0] q_a = sub_wire0[SIZE-1:0];
+	wire [SIZE-1:0] q_b = sub_wire1[SIZE-1:0];
 
 	altsyncram	altsyncram_component (
 				.clock0 (clock),
@@ -105,8 +108,8 @@ module SHM_content (
 		altsyncram_component.init_file = "../src/mif/shm_content.mif",
 		altsyncram_component.intended_device_family = "Cyclone II",
 		altsyncram_component.lpm_type = "altsyncram",
-		altsyncram_component.numwords_a = 32768,
-		altsyncram_component.numwords_b = 32768,
+		altsyncram_component.numwords_a = 2**SIZE,
+		altsyncram_component.numwords_b = 2**SIZE,
 		altsyncram_component.operation_mode = "BIDIR_DUAL_PORT",
 		altsyncram_component.outdata_aclr_a = "NONE",
 		altsyncram_component.outdata_aclr_b = "NONE",
@@ -114,10 +117,10 @@ module SHM_content (
 		altsyncram_component.outdata_reg_b = "CLOCK0",
 		altsyncram_component.power_up_uninitialized = "FALSE",
 		altsyncram_component.read_during_write_mode_mixed_ports = "OLD_DATA",
-		altsyncram_component.widthad_a = 15,
-		altsyncram_component.widthad_b = 15,
-		altsyncram_component.width_a = 16,
-		altsyncram_component.width_b = 16,
+		altsyncram_component.widthad_a = SIZE,
+		altsyncram_component.widthad_b = SIZE,
+		altsyncram_component.width_a = WORD_SIZE,
+		altsyncram_component.width_b = WORD_SIZE,
 		altsyncram_component.width_byteena_a = 1,
 		altsyncram_component.width_byteena_b = 1,
 		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK0";
