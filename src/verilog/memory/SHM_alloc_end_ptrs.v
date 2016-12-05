@@ -4,7 +4,7 @@
 // MODULE: altsyncram 
 
 // ============================================================
-// File Name: SHM_content.v
+// File Name: SHM_pages_list.v
 // Megafunction Name(s):
 // 			altsyncram
 //
@@ -36,9 +36,9 @@
 // synopsys translate_off
 `timescale 1 ps / 1 ps
 // synopsys translate_on
-module SHM_content #(
-	SIZE,
-	WORD_SIZE
+module SHM_alloc_end_ptrs #(
+	PAGES_COUNT,
+	PAGE_SIZE
 )(
 	address_a,
 	address_b,
@@ -50,15 +50,15 @@ module SHM_content #(
 	q_a,
 	q_b);
 
-	input	[SIZE-1:0]  address_a;
-	input	[SIZE-1:0]  address_b;
+	input	[PAGES_COUNT-1:0]  address_a;
+	input	[PAGES_COUNT-1:0]  address_b;
 	input	  clock;
-	input	[WORD_SIZE-1:0]  data_a;
-	input	[WORD_SIZE-1:0]  data_b;
+	input	[PAGE_SIZE-1:0]  data_a;
+	input	[PAGE_SIZE-1:0]  data_b;
 	input	  wren_a;
 	input	  wren_b;
-	output	[WORD_SIZE-1:0]  q_a;
-	output	[WORD_SIZE-1:0]  q_b;
+	output	[PAGE_SIZE-1:0]  q_a;
+	output	[PAGE_SIZE-1:0]  q_b;
 `ifndef ALTERA_RESERVED_QIS
 // synopsys translate_off
 `endif
@@ -69,10 +69,10 @@ module SHM_content #(
 // synopsys translate_on
 `endif
 
-	wire [WORD_SIZE-1:0] sub_wire0;
-	wire [WORD_SIZE-1:0] sub_wire1;
-	wire [WORD_SIZE-1:0] q_a = sub_wire0[WORD_SIZE-1:0];
-	wire [WORD_SIZE-1:0] q_b = sub_wire1[WORD_SIZE-1:0];
+	wire [PAGES_COUNT-1:0] sub_wire0;
+	wire [PAGES_COUNT-1:0] sub_wire1;
+	wire [PAGES_COUNT-1:0] q_a = sub_wire0[PAGES_COUNT-1:0];
+	wire [PAGES_COUNT-1:0] q_b = sub_wire1[PAGES_COUNT-1:0];
 
 	altsyncram	altsyncram_component (
 				.clock0 (clock),
@@ -105,11 +105,11 @@ module SHM_content #(
 		altsyncram_component.clock_enable_output_a = "BYPASS",
 		altsyncram_component.clock_enable_output_b = "BYPASS",
 		altsyncram_component.indata_reg_b = "CLOCK0",
-		altsyncram_component.init_file = "../src/mif/shm_content.mif",
+		altsyncram_component.init_file = "../src/mif/shm_alloc_end_ptrs.mif",
 		altsyncram_component.intended_device_family = "Cyclone II",
 		altsyncram_component.lpm_type = "altsyncram",
-		altsyncram_component.numwords_a = 2**SIZE,
-		altsyncram_component.numwords_b = 2**SIZE,
+		altsyncram_component.numwords_a = 2**PAGES_COUNT,
+		altsyncram_component.numwords_b = 2**PAGES_COUNT,
 		altsyncram_component.operation_mode = "BIDIR_DUAL_PORT",
 		altsyncram_component.outdata_aclr_a = "NONE",
 		altsyncram_component.outdata_aclr_b = "NONE",
@@ -117,10 +117,10 @@ module SHM_content #(
 		altsyncram_component.outdata_reg_b = "CLOCK0",
 		altsyncram_component.power_up_uninitialized = "FALSE",
 		altsyncram_component.read_during_write_mode_mixed_ports = "OLD_DATA",
-		altsyncram_component.widthad_a = SIZE,
-		altsyncram_component.widthad_b = SIZE,
-		altsyncram_component.width_a = WORD_SIZE,
-		altsyncram_component.width_b = WORD_SIZE,
+		altsyncram_component.widthad_a = PAGES_COUNT,
+		altsyncram_component.widthad_b = PAGES_COUNT,
+		altsyncram_component.width_a = PAGE_SIZE,
+		altsyncram_component.width_b = PAGE_SIZE,
 		altsyncram_component.width_byteena_a = 1,
 		altsyncram_component.width_byteena_b = 1,
 		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK0";
@@ -161,9 +161,9 @@ endmodule
 // Retrieval info: PRIVATE: JTAG_ENABLED NUMERIC "0"
 // Retrieval info: PRIVATE: JTAG_ID STRING "NONE"
 // Retrieval info: PRIVATE: MAXIMUM_DEPTH NUMERIC "0"
-// Retrieval info: PRIVATE: MEMSIZE NUMERIC "524288"
+// Retrieval info: PRIVATE: MEMSIZE NUMERIC "49152"
 // Retrieval info: PRIVATE: MEM_IN_BITS NUMERIC "0"
-// Retrieval info: PRIVATE: MIFfilename STRING "../src/mif/shm_content.mif"
+// Retrieval info: PRIVATE: MIFfilename STRING "../src/mif/shm_pages_list.mif"
 // Retrieval info: PRIVATE: OPERATION_MODE NUMERIC "3"
 // Retrieval info: PRIVATE: OUTDATA_ACLR_B NUMERIC "0"
 // Retrieval info: PRIVATE: OUTDATA_REG_B NUMERIC "1"
@@ -181,10 +181,10 @@ endmodule
 // Retrieval info: PRIVATE: USE_DIFF_CLKEN NUMERIC "0"
 // Retrieval info: PRIVATE: UseDPRAM NUMERIC "1"
 // Retrieval info: PRIVATE: VarWidth NUMERIC "0"
-// Retrieval info: PRIVATE: WIDTH_READ_A NUMERIC "16"
-// Retrieval info: PRIVATE: WIDTH_READ_B NUMERIC "16"
-// Retrieval info: PRIVATE: WIDTH_WRITE_A NUMERIC "16"
-// Retrieval info: PRIVATE: WIDTH_WRITE_B NUMERIC "16"
+// Retrieval info: PRIVATE: WIDTH_READ_A NUMERIC "12"
+// Retrieval info: PRIVATE: WIDTH_READ_B NUMERIC "12"
+// Retrieval info: PRIVATE: WIDTH_WRITE_A NUMERIC "12"
+// Retrieval info: PRIVATE: WIDTH_WRITE_B NUMERIC "12"
 // Retrieval info: PRIVATE: WRADDR_ACLR_B NUMERIC "0"
 // Retrieval info: PRIVATE: WRADDR_REG_B NUMERIC "1"
 // Retrieval info: PRIVATE: WRCTRL_ACLR_B NUMERIC "0"
@@ -197,11 +197,11 @@ endmodule
 // Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_A STRING "BYPASS"
 // Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_B STRING "BYPASS"
 // Retrieval info: CONSTANT: INDATA_REG_B STRING "CLOCK0"
-// Retrieval info: CONSTANT: INIT_FILE STRING "../src/mif/shm_content.mif"
+// Retrieval info: CONSTANT: INIT_FILE STRING "../src/mif/shm_pages_list.mif"
 // Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone II"
 // Retrieval info: CONSTANT: LPM_TYPE STRING "altsyncram"
-// Retrieval info: CONSTANT: NUMWORDS_A NUMERIC "32768"
-// Retrieval info: CONSTANT: NUMWORDS_B NUMERIC "32768"
+// Retrieval info: CONSTANT: NUMWORDS_A NUMERIC "4096"
+// Retrieval info: CONSTANT: NUMWORDS_B NUMERIC "4096"
 // Retrieval info: CONSTANT: OPERATION_MODE STRING "BIDIR_DUAL_PORT"
 // Retrieval info: CONSTANT: OUTDATA_ACLR_A STRING "NONE"
 // Retrieval info: CONSTANT: OUTDATA_ACLR_B STRING "NONE"
@@ -209,35 +209,35 @@ endmodule
 // Retrieval info: CONSTANT: OUTDATA_REG_B STRING "CLOCK0"
 // Retrieval info: CONSTANT: POWER_UP_UNINITIALIZED STRING "FALSE"
 // Retrieval info: CONSTANT: READ_DURING_WRITE_MODE_MIXED_PORTS STRING "OLD_DATA"
-// Retrieval info: CONSTANT: WIDTHAD_A NUMERIC "15"
-// Retrieval info: CONSTANT: WIDTHAD_B NUMERIC "15"
-// Retrieval info: CONSTANT: WIDTH_A NUMERIC "16"
-// Retrieval info: CONSTANT: WIDTH_B NUMERIC "16"
+// Retrieval info: CONSTANT: WIDTHAD_A NUMERIC "12"
+// Retrieval info: CONSTANT: WIDTHAD_B NUMERIC "12"
+// Retrieval info: CONSTANT: WIDTH_A NUMERIC "12"
+// Retrieval info: CONSTANT: WIDTH_B NUMERIC "12"
 // Retrieval info: CONSTANT: WIDTH_BYTEENA_A NUMERIC "1"
 // Retrieval info: CONSTANT: WIDTH_BYTEENA_B NUMERIC "1"
 // Retrieval info: CONSTANT: WRCONTROL_WRADDRESS_REG_B STRING "CLOCK0"
-// Retrieval info: USED_PORT: address_a 0 0 15 0 INPUT NODEFVAL "address_a[14..0]"
-// Retrieval info: USED_PORT: address_b 0 0 15 0 INPUT NODEFVAL "address_b[14..0]"
+// Retrieval info: USED_PORT: address_a 0 0 12 0 INPUT NODEFVAL "address_a[11..0]"
+// Retrieval info: USED_PORT: address_b 0 0 12 0 INPUT NODEFVAL "address_b[11..0]"
 // Retrieval info: USED_PORT: clock 0 0 0 0 INPUT VCC "clock"
-// Retrieval info: USED_PORT: data_a 0 0 16 0 INPUT NODEFVAL "data_a[15..0]"
-// Retrieval info: USED_PORT: data_b 0 0 16 0 INPUT NODEFVAL "data_b[15..0]"
-// Retrieval info: USED_PORT: q_a 0 0 16 0 OUTPUT NODEFVAL "q_a[15..0]"
-// Retrieval info: USED_PORT: q_b 0 0 16 0 OUTPUT NODEFVAL "q_b[15..0]"
+// Retrieval info: USED_PORT: data_a 0 0 12 0 INPUT NODEFVAL "data_a[11..0]"
+// Retrieval info: USED_PORT: data_b 0 0 12 0 INPUT NODEFVAL "data_b[11..0]"
+// Retrieval info: USED_PORT: q_a 0 0 12 0 OUTPUT NODEFVAL "q_a[11..0]"
+// Retrieval info: USED_PORT: q_b 0 0 12 0 OUTPUT NODEFVAL "q_b[11..0]"
 // Retrieval info: USED_PORT: wren_a 0 0 0 0 INPUT GND "wren_a"
 // Retrieval info: USED_PORT: wren_b 0 0 0 0 INPUT GND "wren_b"
-// Retrieval info: CONNECT: @address_a 0 0 15 0 address_a 0 0 15 0
-// Retrieval info: CONNECT: @address_b 0 0 15 0 address_b 0 0 15 0
+// Retrieval info: CONNECT: @address_a 0 0 12 0 address_a 0 0 12 0
+// Retrieval info: CONNECT: @address_b 0 0 12 0 address_b 0 0 12 0
 // Retrieval info: CONNECT: @clock0 0 0 0 0 clock 0 0 0 0
-// Retrieval info: CONNECT: @data_a 0 0 16 0 data_a 0 0 16 0
-// Retrieval info: CONNECT: @data_b 0 0 16 0 data_b 0 0 16 0
+// Retrieval info: CONNECT: @data_a 0 0 12 0 data_a 0 0 12 0
+// Retrieval info: CONNECT: @data_b 0 0 12 0 data_b 0 0 12 0
 // Retrieval info: CONNECT: @wren_a 0 0 0 0 wren_a 0 0 0 0
 // Retrieval info: CONNECT: @wren_b 0 0 0 0 wren_b 0 0 0 0
-// Retrieval info: CONNECT: q_a 0 0 16 0 @q_a 0 0 16 0
-// Retrieval info: CONNECT: q_b 0 0 16 0 @q_b 0 0 16 0
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content.v TRUE
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content.inc FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content.cmp FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content.bsf FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content_inst.v FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_content_bb.v FALSE
+// Retrieval info: CONNECT: q_a 0 0 12 0 @q_a 0 0 12 0
+// Retrieval info: CONNECT: q_b 0 0 12 0 @q_b 0 0 12 0
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list.v TRUE
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list.inc FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list.cmp FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list.bsf FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list_inst.v FALSE
+// Retrieval info: GEN_FILE: TYPE_NORMAL SHM_pages_list_bb.v TRUE
 // Retrieval info: LIB_FILE: altera_mf

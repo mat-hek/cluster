@@ -23,8 +23,8 @@ module DMA #(
 	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
 	input [SIZE-1:0] cn_dbg_addr,
 	output [WORD_SIZE-1:0] cn_dbg_data_out,
-	input [`PAGES_COUNT-1:0] pl_dbg_addr,
-	output [PAGE_SIZE-1:0] pl_dbg_data_out,
+	input [`PAGES_COUNT-1:0] aep_dbg_addr,
+	output [PAGE_SIZE-1:0] aep_dbg_data_out,
 	output [15:0] dbg1,
 	output [15:0] dbg2,
 	output [15:0] dbg3,
@@ -66,6 +66,30 @@ SHM_pages_list #(`PAGES_COUNT, PAGE_SIZE) pages_list(
 	.q_a(pl_data_out),
 	.q_b(pl_dbg_data_out)
 );
+
+//alloc end pointers
+
+logic [`PAGES_COUNT-1:0] aep_addr;
+logic [`PAGES_COUNT-1:0] aep_addr2;
+logic [`PAGES_COUNT-1:0] aep_data_in;
+logic [`PAGES_COUNT-1:0] aep_data_in2;
+logic aep_rw;
+logic aep_rw2;
+logic [`PAGES_COUNT-1:0] aep_data_out;
+logic [`PAGES_COUNT-1:0] aep_data_out2;
+
+SHM_alloc_end_ptrs #(`PAGES_COUNT, PAGE_SIZE) alloc_end_ptrs(
+	.address_a(aep_addr),
+	.address_b(aep_dbg_addr),
+	.clock(mem_clock),
+	.data_a(aep_data_in),
+	.data_b(/*aep_dbg_data_in*/),
+	.wren_a(aep_rw),
+	.wren_b(0 /*aep_dbg_rw*/),
+	.q_a(aep_data_out),
+	.q_b(aep_dbg_data_out)
+);
+
 
 // content
 
@@ -161,6 +185,14 @@ always@(posedge clock) begin
 						`WRITE: begin
 							proc_mem_rw[current_proc] <= `READ;
 							proc_mem_addr[current_proc] <= copy_start[current_proc];
+							if (ptr[current_proc] < 2**PAGE_SIZE) begin
+								cn_addr <= next_page << PAGE_SIZE;
+								pl_addr <= next_page;
+							end else begin
+								cn_addr <= ptr[current_proc];
+								pl_addr <= ptr[current_proc] >> PAGE_SIZE;
+							end
+							update_next_page <= 1;
 							stage <= `STORE;
 						end
 						`READ: begin
@@ -215,10 +247,7 @@ always@(posedge clock) begin
 					if (already_read == 1) begin					
 						copying <= 1;
 						cn_rw <= `WRITE;
-						cn_addr <= next_page << PAGE_SIZE;
-						pl_addr <= next_page;
 						pl_rw <= `READ;
-						update_next_page <= 1;
 					end
 					if (already_read > 1) begin
 						next_shm_addr();
@@ -228,6 +257,9 @@ always@(posedge clock) begin
 					copying <= 0;
 					cn_rw <= `READ;
 					stage <= `LISTEN;
+					aep_addr <= ptr[current_proc] >> PAGE_SIZE;
+					aep_data_in <= cn_addr >> PAGE_SIZE;
+					aep_rw <= `WRITE;
 					//move_to_next_proc
 				end
 			end
