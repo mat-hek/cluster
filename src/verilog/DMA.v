@@ -12,59 +12,48 @@ module DMA #(
 	input start,
 	input trigger [0:PROC_CNT-1],
 	output ack [0:PROC_CNT-1],
-	input action [0:PROC_CNT-1],
+	input [1:0] action [0:PROC_CNT-1],
 	input [SIZE-1:0] ptr [0:PROC_CNT-1],
+	input [PROCSIZE-1:0] copy_start [0:PROC_CNT-1],
+	input [PROCSIZE-1:0] copy_length [0:PROC_CNT-1],
+	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
+	output proc_mem_rw [0:PROC_CNT-1],
 	output [WORD_SIZE-1:0] proc_mem_data_in [0:PROC_CNT-1],
 	input [WORD_SIZE-1:0] proc_mem_data_out [0:PROC_CNT-1],
 	output [PROCSIZE-1:0] proc_mem_addr [0:PROC_CNT-1],
-	input [PROCSIZE-1:0] copy_start [0:PROC_CNT-1],
-	input [PROCSIZE-1:0] copy_length [0:PROC_CNT-1],
-	output proc_mem_rw [0:PROC_CNT-1],
-	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
-	input [SIZE-1:0] cn_dbg_addr,
-	output [WORD_SIZE-1:0] cn_dbg_data_out,
-	input [`PAGES_COUNT-1:0] aep_dbg_addr,
-	output [PAGE_SIZE-1:0] aep_dbg_data_out,
-	output [15:0] dbg1,
-	output [15:0] dbg2,
-	output [15:0] dbg3,
-	output [15:0] dbg4,
-	output run_dbg
+	output [17:0] oLEDR,
+	output [7:0] oLEDG,
+	input [17:0] iSW,
+	output [15:0] oDISP [0:2]
 );
 
-assign dbg1 = cn_addr;
-assign dbg2 = proc_mem_addr[current_proc];
-assign dbg3 = next_page;
-assign dbg4 = pl_data_out;
-assign run_dbg = start;
+assign oLEDR[17:14] = proc_mem_addr[current_proc];
+assign oLEDR[13:10] = cn_addr;
 
 // actions
 `define READ 0
 `define WRITE 1
+`define FREE 2
 
 
 // pages list
 
 logic [`PAGES_COUNT-1:0] pl_addr;
-logic [`PAGES_COUNT-1:0] pl_addr2;
 logic [`PAGES_COUNT-1:0] pl_data_in;
-logic [`PAGES_COUNT-1:0] pl_data_in2;
 logic pl_rw;
-logic pl_rw2;
 logic [`PAGES_COUNT-1:0] pl_data_out;
-logic [`PAGES_COUNT-1:0] pl_data_out2;
 
 
 SHM_pages_list #(`PAGES_COUNT, PAGE_SIZE) pages_list(
 	.address_a(pl_addr),
-	.address_b(pl_dbg_addr),
+	.address_b(iSW[8:7]),
 	.clock(mem_clock),
 	.data_a(pl_data_in),
-	.data_b(/*pl_dbg_data_in*/),
+	.data_b(),
 	.wren_a(pl_rw),
-	.wren_b(0 /*pl_dbg_rw*/),
+	.wren_b(0),
 	.q_a(pl_data_out),
-	.q_b(pl_dbg_data_out)
+	.q_b(oDISP[0])
 );
 
 //alloc end pointers
@@ -80,14 +69,14 @@ logic [`PAGES_COUNT-1:0] aep_data_out2;
 
 SHM_alloc_end_ptrs #(`PAGES_COUNT, PAGE_SIZE) alloc_end_ptrs(
 	.address_a(aep_addr),
-	.address_b(aep_dbg_addr),
+	.address_b(iSW[6:5]),
 	.clock(mem_clock),
 	.data_a(aep_data_in),
-	.data_b(/*aep_dbg_data_in*/),
+	.data_b(),
 	.wren_a(aep_rw),
-	.wren_b(0 /*aep_dbg_rw*/),
+	.wren_b(0),
 	.q_a(aep_data_out),
-	.q_b(aep_dbg_data_out)
+	.q_b(oDISP[1])
 );
 
 
@@ -98,10 +87,12 @@ logic [WORD_SIZE-1:0] cn_data_in;
 logic cn_rw;
 logic [WORD_SIZE-1:0] cn_data_out;
 
+logic cn_dbg_data_out;
+assign oLEDR[3:0] = iSW[4] ? 0 : cn_dbg_data_out;
 
 SHM_content #(SIZE, WORD_SIZE) content(
 	.address_a(cn_addr),
-	.address_b(cn_dbg_addr),
+	.address_b(iSW[3:0]),
 	.clock(mem_clock),
 	.data_a(cn_data_in),
 	.data_b(/*cn_dbg_data_in*/),
@@ -120,7 +111,6 @@ logic [2:0] stage;
 `define STORE 1
 `define LOAD 2
 `define WAIT 3
-`define FREE 4
 
 logic [1:0] wait_next_stage;
 logic [2:0] wait_time;
@@ -140,23 +130,25 @@ task move_to_next_proc;
 	end
 endtask
 
-logic [PAGE_SIZE-1:0] next_page;
-logic [1:0] update_next_page;
+logic [PAGE_SIZE-1:0] last_page;
+logic [1:0] update_last_page;
+logic [PAGE_SIZE-1:0] first_page;
+logic [1:0] update_first_page;
 logic [SIZE-1:0] already_read;
-task next_shm_addr;
+task next_shm_addr(input ufp);
 	begin
 		if (cn_addr % PAGE_SIZE**2 == PAGE_SIZE**2-1) begin // last word of page
 			cn_addr <= pl_data_out << PAGE_SIZE;
 			pl_addr <= pl_data_out;
 			pl_rw <= `READ;
-			update_next_page <= 1;
+			if(ufp)
+				update_first_page <= 1;
 		end else
 			cn_addr <= cn_addr + 1;
 	end
 endtask
 
 logic copying;
-logic [1:0] free_stage;
 
 always@(current_proc, copying) if(copying) begin
 	cn_data_in <= proc_mem_data_out[current_proc];
@@ -166,41 +158,51 @@ end
 always@(posedge clock) begin
 	if (start) begin
 		stage <= `LISTEN;
-		next_page <= 1;
+		first_page <= 1;
+		last_page <= `PAGES_COUNT-1;
 		copying <= 0;
 		run <= 1;
 	end else if (run) begin
-		case(update_next_page)
+		case(update_last_page)
 			1, 2: begin
-				update_next_page <= update_next_page + 1;
+				update_last_page <= update_last_page + 1;
 				end
 			3: begin
-				update_next_page <= 0;
-				next_page <= pl_data_out;
+				update_last_page <= 0;
+				last_page <= aep_data_out;
+			end
+		endcase
+		case(update_first_page)
+			1, 2: begin
+				update_first_page <= update_first_page + 1;
+				end
+			3: begin
+				update_first_page <= 0;
+				first_page <= pl_data_out;
 			end
 		endcase
 		case(stage)
 			`LISTEN: begin
 				if(last_trigger[current_proc] ^ trigger[current_proc]) begin
-					last_trigger[current_proc] = trigger[current_proc];
 					case (action[current_proc])
-						`WRITE: begin
+						`WRITE: if(update_first_page == 0) begin
+							last_trigger[current_proc] <= trigger[current_proc];
 							proc_mem_rw[current_proc] <= `READ;
 							proc_mem_addr[current_proc] <= copy_start[current_proc];
 							if (ptr[current_proc] < 2**PAGE_SIZE) begin
-								cn_addr <= next_page << PAGE_SIZE;
-								pl_addr <= next_page;
+								cn_addr <= first_page << PAGE_SIZE;
+								pl_addr <= first_page;
 							end else begin
 								cn_addr <= ptr[current_proc];
 								pl_addr <= ptr[current_proc] >> PAGE_SIZE;
 							end
-							update_next_page <= 1;
+							update_first_page <= 1;
 							stage <= `STORE;
 						end
 						`READ: begin
+							last_trigger[current_proc] <= trigger[current_proc];
 							cn_rw <= `READ;
 							cn_addr <= ptr[current_proc];
-							update_next_page <= 1;
 							pl_rw <= `READ;
 							pl_addr <= ptr[current_proc] >> PAGE_SIZE;
 							if (ptr[current_proc] % PAGE_SIZE**2 >= PAGE_SIZE**2-2) begin
@@ -209,6 +211,17 @@ always@(posedge clock) begin
 								stage <= `WAIT;
 							end else
 								stage <= `LOAD;
+						end
+						`FREE: begin							
+							last_trigger[current_proc] <= trigger[current_proc];
+							aep_rw <= `READ;
+							aep_addr <= ptr[current_proc] >> PAGE_SIZE;
+							pl_rw <= `WRITE;
+							pl_addr <= last_page;
+							pl_data_in <= ptr[current_proc] >> PAGE_SIZE;
+							update_last_page <= 1;
+							stage <= `LISTEN;
+							//move_to_next_proc
 						end
 					endcase
 					already_read <= 0;
@@ -222,7 +235,7 @@ always@(posedge clock) begin
 			end
 			`LOAD: begin
 				if (already_read < copy_length[current_proc]) begin
-					next_shm_addr();
+					next_shm_addr(0);
 				end
 				if (already_read < copy_length[current_proc] + 2) begin
 					if (already_read == 1) begin					
@@ -252,7 +265,7 @@ always@(posedge clock) begin
 						pl_rw <= `READ;
 					end
 					if (already_read > 1) begin
-						next_shm_addr();
+						next_shm_addr(1);
 					end
 					already_read <= already_read + 1;
 				end else begin
@@ -266,22 +279,6 @@ always@(posedge clock) begin
 					end
 					//move_to_next_proc
 				end
-			end
-			`FREE: begin
-				case(free_stage)
-					0: begin
-						aep_addr <= ptr[current_proc] >> PAGE_SIZE;
-						aep_rw <= `READ;
-						free_stage <= 1;
-						end
-					1: free_stage <= 2;
-					2: begin
-						pl_addr <= next_page;
-						pl_data_in <= aep_data_out;
-						free_stage <= 0;
-						stage <= `LISTEN;
-						end
-				endcase
 			end
 		endcase
 	end

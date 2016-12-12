@@ -378,72 +378,82 @@ prescaler pres
 	.clkout(auto_clk)
 );
 
-dek7seg dec_dbg3(
-	.data_in(dbg3),
+
+logic [15:0] disps [0:2];
+
+dek7seg dec0(
+	.data_in(disps[0]),
 	.data_out(oHEX0_D)
 );
 
-dek7seg dec_dbg4(
-	.data_in(dbg4),
-	.data_out(oHEX2_D)
-);
-
-dek7seg pl_data_out_disp(
-	.data_in(pl_dbg_data_out),
+dek7seg dec1(
+	.data_in(disps[1]),
 	.data_out(oHEX1_D)
 );
 
-logic [1:0] pl_dbg_data_out;
+dek7seg dec2(
+	.data_in(disps[2]),
+	.data_out(oHEX2_D)
+);
+
+
 
 logic clk_switch;
 assign clk_switch = iSW[17];
 
 logic clock;
 assign clock = (clk_switch == 1'b0) ? button_clk : auto_clk;
-assign oLEDR[0] = clock;
+assign myLEDG[7] = clock;
 
 // mock proc memory
 
-
+logic proc_mem_dbg_out;
 
 Temp_proc_mem tpm(
 	.address_a(proc_mem_addr[0]),
-	.address_b(iSW[7:4]),
+	.address_b(iSW[3:0]),
 	.clock(clock),
 	.data_a(proc_mem_data_in[0]),
 	.data_b(),
 	.wren_a(proc_mem_rw[0]),
 	.wren_b(0),
 	.q_a(proc_mem_data_out[0]),
-	.q_b(oLEDG[7:4])
+	.q_b(proc_mem_dbg_out)
 );
 
+assign myLEDR[3:0] = iSW[4] ? proc_mem_dbg_out : 0;
+
 // mock proc ports
-	
-	logic start;
-	assign start = iSW[14];
-	logic trigger[0:0];
-	assign trigger[0] = iSW[15];
-	logic ack[0:0];
-	logic [3:0] ptr[0:0];
-	assign ptr[0] = 'b111;
+	logic [17:0] myLEDR;
+	logic [17:0] dmaLEDR;
+	assign oLEDR = myLEDR | dmaLEDR;
+	logic [17:0] myLEDG;
+	logic [17:0] dmaLEDG;
+	assign oLEDG = myLEDG | dmaLEDG;
+
+	//proc mock mem
 	logic [15:0] proc_mem_data_in[0:0];
 	logic [15:0] proc_mem_data_out[0:0];
 	logic [3:0] proc_mem_addr[0:0];
 	logic proc_mem_rw[0:0];
+	
+	//other mock ports
+	logic start;
+	assign start = iSW[14];
+	logic trigger[0:0];
+	assign trigger[0] = iSW[16];
+	logic ack[0:0];
+	assign myLEDG[4] = ack[0];
+	logic [3:0] ptr[0:0];
+	assign ptr[0] = iSW[3:0];
 	logic [3:0] copy_start[0:0];
-	assign copy_start[0] = 1;
+	assign copy_start[0] = iSW[12:11];
 	logic [3:0] copy_length[0:0];
-	assign copy_length[0] = 3;
+	assign copy_length[0] = iSW[10:9];
 	logic [1:0] ptr_out[0:0];
-	logic [3:0] cn_dbg_addr;
-	assign cn_dbg_addr[3:0] = iSW[3:0];
-	logic [15:0] cn_dbg_data_out;
-	assign oLEDG[3:0] = cn_dbg_data_out[3:0];
-	logic [15:0] dbg3;
-	logic [15:0] dbg4;
+	assign myLEDG[3:0] = ptr_out[0];
 	logic action[0:0];
-	assign action[0] = iSW[13];
+	assign action[0] = iSW[14:13];
 
 DMA #(1) dma(
 	.start(start),
@@ -453,22 +463,17 @@ DMA #(1) dma(
 	.ack(ack),
 	.action(action),
 	.ptr(ptr),
+	.copy_start(copy_start),
+	.copy_length(copy_length),
+	.ptr_out(ptr_out),
 	.proc_mem_data_in(proc_mem_data_in),
 	.proc_mem_data_out(proc_mem_data_out),
 	.proc_mem_addr(proc_mem_addr),
 	.proc_mem_rw(proc_mem_rw),
-	.copy_start(copy_start),
-	.copy_length(copy_length),
-	.ptr_out(ptr_out),
-	.cn_dbg_addr(cn_dbg_addr),
-	.cn_dbg_data_out(cn_dbg_data_out),
-	.aep_dbg_addr(iSW[10:9]),
-	.aep_dbg_data_out(pl_dbg_data_out),
-	.dbg1(oLEDR[13:10]),
-	.dbg2(oLEDR[17:14]),
-	.dbg3(dbg3),
-	.dbg4(dbg4),
-	.run_dbg(oLEDR[8])
+	.oLEDG(dmaLEDG),
+	.oLEDR(dmaLEDR),
+	.iSW(iSW),
+	.oDISP(disps)
 );
 
 endmodule
