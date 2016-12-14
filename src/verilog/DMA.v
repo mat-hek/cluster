@@ -27,8 +27,11 @@ module DMA #(
 	output [15:0] oDISP [0:2]
 );
 
+assign oDISP[2] = first_page;
+
 assign oLEDR[17:14] = proc_mem_addr[current_proc];
 assign oLEDR[13:10] = cn_addr;
+assign oLEDG[5] = start;
 
 // actions
 `define READ 0
@@ -87,8 +90,8 @@ logic [WORD_SIZE-1:0] cn_data_in;
 logic cn_rw;
 logic [WORD_SIZE-1:0] cn_data_out;
 
-logic cn_dbg_data_out;
-assign oLEDR[3:0] = iSW[4] ? 0 : cn_dbg_data_out;
+logic [3:0] cn_dbg_data_out;
+assign oLEDR[3:0] = iSW[4] ? 4'b0 : cn_dbg_data_out;
 
 SHM_content #(SIZE, WORD_SIZE) content(
 	.address_a(cn_addr),
@@ -192,11 +195,11 @@ always@(posedge clock) begin
 							if (ptr[current_proc] < 2**PAGE_SIZE) begin
 								cn_addr <= first_page << PAGE_SIZE;
 								pl_addr <= first_page;
+								update_first_page <= 1;
 							end else begin
 								cn_addr <= ptr[current_proc];
 								pl_addr <= ptr[current_proc] >> PAGE_SIZE;
 							end
-							update_first_page <= 1;
 							stage <= `STORE;
 						end
 						`READ: begin
@@ -265,7 +268,7 @@ always@(posedge clock) begin
 						pl_rw <= `READ;
 					end
 					if (already_read > 1) begin
-						next_shm_addr(1);
+						next_shm_addr(ptr[current_proc] < 2**PAGE_SIZE);
 					end
 					already_read <= already_read + 1;
 				end else begin

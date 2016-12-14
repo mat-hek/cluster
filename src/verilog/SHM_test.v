@@ -407,7 +407,7 @@ assign myLEDG[7] = clock;
 
 // mock proc memory
 
-logic proc_mem_dbg_out;
+logic [3:0] proc_mem_dbg_out;
 
 Temp_proc_mem tpm(
 	.address_a(proc_mem_addr[0]),
@@ -439,7 +439,7 @@ assign myLEDR[3:0] = iSW[4] ? proc_mem_dbg_out : 0;
 	
 	//other mock ports
 	logic start;
-	assign start = iSW[14];
+	assign start = iSW[15];
 	logic trigger[0:0];
 	assign trigger[0] = iSW[16];
 	logic ack[0:0];
