@@ -452,7 +452,7 @@ assign myLEDR[3:0] = iSW[4] ? proc_mem_dbg_out : 0;
 	assign copy_length[0] = iSW[10:9];
 	logic [1:0] ptr_out[0:0];
 	assign myLEDG[3:0] = ptr_out[0];
-	logic action[0:0];
+	logic [1:0] action[0:0];
 	assign action[0] = iSW[14:13];
 
 DMA #(1) dma(

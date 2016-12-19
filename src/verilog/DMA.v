@@ -16,7 +16,7 @@ module DMA #(
 	input [SIZE-1:0] ptr [0:PROC_CNT-1],
 	input [PROCSIZE-1:0] copy_start [0:PROC_CNT-1],
 	input [PROCSIZE-1:0] copy_length [0:PROC_CNT-1],
-	output [`PAGES_COUNT-1:0] ptr_out [0:PROC_CNT-1],
+	output [SIZE-1:0] ptr_out [0:PROC_CNT-1],
 	output proc_mem_rw [0:PROC_CNT-1],
 	output [WORD_SIZE-1:0] proc_mem_data_in [0:PROC_CNT-1],
 	input [WORD_SIZE-1:0] proc_mem_data_out [0:PROC_CNT-1],
@@ -27,7 +27,7 @@ module DMA #(
 	output [15:0] oDISP [0:2]
 );
 
-assign oDISP[2] = first_page;
+assign oDISP[2] = start_page;
 
 assign oLEDR[17:14] = proc_mem_addr[current_proc];
 assign oLEDR[13:10] = cn_addr;
@@ -138,6 +138,7 @@ logic [1:0] update_last_page;
 logic [PAGE_SIZE-1:0] first_page;
 logic [1:0] update_first_page;
 logic [SIZE-1:0] already_read;
+logic [PAGE_SIZE-1:0] start_page;
 task next_shm_addr(input ufp);
 	begin
 		if (cn_addr % PAGE_SIZE**2 == PAGE_SIZE**2-1) begin // last word of page
@@ -193,6 +194,8 @@ always@(posedge clock) begin
 							proc_mem_rw[current_proc] <= `READ;
 							proc_mem_addr[current_proc] <= copy_start[current_proc];
 							if (ptr[current_proc] < 2**PAGE_SIZE) begin
+								ptr_out[current_proc] <= first_page << PAGE_SIZE;
+								start_page <= first_page;
 								cn_addr <= first_page << PAGE_SIZE;
 								pl_addr <= first_page;
 								update_first_page <= 1;
@@ -208,8 +211,8 @@ always@(posedge clock) begin
 							cn_addr <= ptr[current_proc];
 							pl_rw <= `READ;
 							pl_addr <= ptr[current_proc] >> PAGE_SIZE;
-							if (ptr[current_proc] % PAGE_SIZE**2 >= PAGE_SIZE**2-2) begin
-								wait_time <= PAGE_SIZE**2 - ptr[current_proc] % PAGE_SIZE**2;
+							if (ptr[current_proc] % 2**PAGE_SIZE >= 2**PAGE_SIZE-2) begin
+								wait_time <= 2**PAGE_SIZE - ptr[current_proc] % 2**PAGE_SIZE;
 								wait_next_stage <= `LOAD;
 								stage <= `WAIT;
 							end else
@@ -276,7 +279,7 @@ always@(posedge clock) begin
 					cn_rw <= `READ;
 					stage <= `LISTEN;
 					if (ptr[current_proc] < 2**PAGE_SIZE) begin
-						aep_addr <= ptr[current_proc] >> PAGE_SIZE;
+						aep_addr <= start_page;
 						aep_data_in <= cn_addr >> PAGE_SIZE;
 						aep_rw <= `WRITE;
 					end
