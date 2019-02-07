@@ -1,4 +1,4 @@
-module Cluster
+module SHM_test
 	(
 		////////////////////	Clock Input	 	////////////////////
 		iCLK_28,						//  28.63636 MHz
@@ -355,16 +355,6 @@ inout			GPIO_CLKOUT_P1;         //	GPIO Connection 1 Clock Output 1
 // REG/logic declarations
 //=============================================================================
 
-localparam  PROC_CNT = 2;
-
-logic START;
-debouncer start
-(
-	.button(iKEY[1]),
-	.clk(iCLK_28),
-	.bt_act(START)
-);
-
 logic button_clk;
 debouncer bt_clk
 (
@@ -372,7 +362,15 @@ debouncer bt_clk
 	.clk(iCLK_28),
 	.bt_act(button_clk)
 );
-
+/*
+logic button_start;
+debouncer bt_strt
+(
+	.button(iKEY[0]),
+	.clk(iCLK_28),
+	.bt_act(button_start)
+);
+*/
 logic auto_clk;
 prescaler pres
 (
@@ -380,158 +378,102 @@ prescaler pres
 	.clkout(auto_clk)
 );
 
+
+logic [15:0] disps [0:2];
+
+dek7seg dec0(
+	.data_in(disps[0]),
+	.data_out(oHEX0_D)
+);
+
+dek7seg dec1(
+	.data_in(disps[1]),
+	.data_out(oHEX1_D)
+);
+
+dek7seg dec2(
+	.data_in(disps[2]),
+	.data_out(oHEX2_D)
+);
+
+
+
 logic clk_switch;
 assign clk_switch = iSW[17];
 
 logic clock;
 assign clock = (clk_switch == 1'b0) ? button_clk : auto_clk;
+assign myLEDG[7] = clock;
 
-logic CURRENT_PROC_NO;
-assign CURRENT_PROC_NO = iSW[13];
-logic [2:0] CURRENT_REG_NO;
-assign CURRENT_REG_NO = iSW[16:14];
-logic [2:0] CURRENT_MEM_TYPE;
-assign CURRENT_MEM_TYPE = iSW[9:8];
-logic [7:0] CURRENT_MEM_ADDR;
-assign CURRENT_MEM_ADDR = iSW[7:0];
+// mock proc memory
 
-logic [15:0] CODE_OUTS [0:PROC_CNT-1];
-logic [7:0] MEM_OUTS [0:PROC_CNT-1];
-logic [7:0] STACK_OUTS [0:PROC_CNT-1];
-logic [15:0] CODE_OUT;
-assign CODE_OUT = CODE_OUTS[CURRENT_PROC_NO];
-logic [7:0] MEM_OUT;
-assign MEM_OUT = MEM_OUTS[CURRENT_PROC_NO];
-logic [7:0] STACK_OUT;
-assign STACK_OUT = STACK_OUTS[CURRENT_PROC_NO];
+logic [3:0] proc_mem_dbg_out;
 
-dek7seg decCODE_1
-(
-	.data_in(CODE_OUT[15:12]),
-	.data_out(oHEX3_D)
-);
-dek7seg decCODE_2
-(
-	.data_in(CODE_OUT[11:8]),
-	.data_out(oHEX2_D)
-);
-dek7seg decCODE_3(
-	.data_in(CODE_OUT[7:4]),
-	.data_out(oHEX1_D)
-);
-dek7seg decCODE_4(
-	.data_in(CODE_OUT[3:0]),
-	.data_out(oHEX0_D)
-);
-
-dek7seg decDATA_1
-(
-	.data_in(MEM_OUT[7:4]),
-	.data_out(oHEX5_D)
-);
-dek7seg decDATA_2
-(
-	.data_in(MEM_OUT[3:0]),
-	.data_out(oHEX4_D)
-);
-
-dek7seg decSTACK_1
-(
-	.data_in(STACK_OUT[7:4]),
-	.data_out(oHEX7_D)
-);
-dek7seg decSTACK_2
-(
-	.data_in(STACK_OUT[3:0]),
-	.data_out(oHEX6_D)
-);
-//=============================================================================
-// Structural coding
-//=============================================================================
-
-logic [7:0] REGS [0:PROC_CNT-1][0:7];
-
-
-logic [7:0] CURRENT_REG;
-always@(CURRENT_REG_NO) begin
-	CURRENT_REG <= REGS[CURRENT_PROC_NO][CURRENT_REG_NO];
-end
-
-assign oLEDG[7:0] = CURRENT_REG;
-
-logic [7:0] CODE_DBG_ADDRESS [0:PROC_CNT-1];
-logic [7:0] MEM_DBG_ADDRESS [0:PROC_CNT-1];
-logic [7:0] STACK_DBG_ADDRESS [0:PROC_CNT-1];
-
-always@(CURRENT_MEM_TYPE or CURRENT_MEM_ADDR or CURRENT_PROC_NO) begin
-	case(CURRENT_MEM_TYPE)
-		2'b00:
-			CODE_DBG_ADDRESS[CURRENT_PROC_NO] <= CURRENT_MEM_ADDR;
-		2'b01:
-			MEM_DBG_ADDRESS[CURRENT_PROC_NO] <= CURRENT_MEM_ADDR;
-		2'b10:
-			STACK_DBG_ADDRESS[CURRENT_PROC_NO] <= CURRENT_MEM_ADDR;
-	endcase
-end
-
-logic proc_running[0:PROC_CNT-1];
-logic proc_spawn[0:PROC_CNT-1];
-logic [7:0] proc_spawn_addr[0:PROC_CNT-1];
-logic proc_start[0:PROC_CNT-1];
-logic [7:0] proc_start_addr[0:PROC_CNT-1];
-logic [7:0] proc_ip[0:PROC_CNT-1];
-assign oLEDR[7:0] = proc_ip[CURRENT_PROC_NO];
-logic proc_dbg[0:PROC_CNT-1];
-logic proc_disp_ack[0:PROC_CNT-1];
-
-assign oLEDR[10] = proc_spawn[1];
-
-assign oLEDR[16] = proc_running[0];
-assign oLEDR[17] = proc_running[1];
-assign oLEDR[13] = proc_start[0];
-assign oLEDR[12] = proc_start[1];
-
-Dispatcher #(.PROC_CNT(PROC_CNT)) d(
-	.start(~START),
+Temp_proc_mem tpm(
+	.address_a(proc_mem_addr[0]),
+	.address_b(iSW[3:0]),
 	.clock(clock),
-	.memory_clock(iCLK_28),
-	.proc_running(proc_running),
-	.proc_spawn_addr(proc_spawn_addr),
-	.proc_onspawn(proc_spawn),
-	.proc_start_addr(proc_start_addr),
-	.proc_start(proc_start),
-	.proc_ack(proc_disp_ack),
-	.dbg_1(oLEDR[15]),
-	.dbg_2(oLEDR[14]),
-	.dbg_3(oLEDR[11])
+	.data_a(proc_mem_data_in[0]),
+	.data_b(),
+	.wren_a(proc_mem_rw[0]),
+	.wren_b(0),
+	.q_a(proc_mem_data_out[0]),
+	.q_b(proc_mem_dbg_out)
 );
 
-assign oLEDR[9] = proc_dbg[1];
+assign myLEDR[3:0] = iSW[4] ? proc_mem_dbg_out : 0;
 
-genvar i;
-generate
-  for (i = 0; i < PROC_CNT; i=i+1) begin:gen_procs
-		Processor proc(
-			.clock(clock),
-			.mem_clock(iCLK_28),
-			.RUN(proc_running[i]),
-			.START(proc_start[i]),
-			.START_ADDR(proc_start_addr[i]),
-			.TRIGGER_SPAWN(proc_spawn[i]),
-			.SPAWN_ADDR(proc_spawn_addr[i]),
-			.CODE_DBG_ADDRESS(CODE_DBG_ADDRESS[i]),
-			.CODE_DBG_OUT(CODE_OUTS[i]),
-			.MEM_DBG_ADDRESS(MEM_DBG_ADDRESS[i]),
-			.MEM_DBG_OUT(MEM_OUTS[i]),
-			.STACK_DBG_ADDRESS(STACK_DBG_ADDRESS[i]),
-			.STACK_DBG_OUT(STACK_OUTS[i]),
-			.REGS(REGS[i]),
-			.IP(proc_ip[i]),
-			.DISP_ACK(proc_disp_ack[i]),
-			.dbg(proc_dbg[i])
-		);
-  end
-endgenerate
+// mock proc ports
+	logic [17:0] myLEDR;
+	logic [17:0] dmaLEDR;
+	assign oLEDR = myLEDR | dmaLEDR;
+	logic [17:0] myLEDG;
+	logic [17:0] dmaLEDG;
+	assign oLEDG = myLEDG | dmaLEDG;
 
+	//proc mock mem
+	logic [15:0] proc_mem_data_in[0:0];
+	logic [15:0] proc_mem_data_out[0:0];
+	logic [3:0] proc_mem_addr[0:0];
+	logic proc_mem_rw[0:0];
+	
+	//other mock ports
+	logic start;
+	assign start = iSW[15];
+	logic trigger[0:0];
+	assign trigger[0] = iSW[16];
+	logic ack[0:0];
+	assign myLEDG[4] = ack[0];
+	logic [3:0] ptr[0:0];
+	assign ptr[0] = iSW[3:0];
+	logic [3:0] copy_start[0:0];
+	assign copy_start[0] = iSW[12:11];
+	logic [3:0] copy_length[0:0];
+	assign copy_length[0] = iSW[10:9];
+	logic [1:0] ptr_out[0:0];
+	assign myLEDG[3:0] = ptr_out[0];
+	logic [1:0] action[0:0];
+	assign action[0] = iSW[14:13];
+
+DMA #(1) dma(
+	.start(start),
+	.clock(clock),
+	.mem_clock(clock),
+	.trigger(trigger),
+	.ack(ack),
+	.action(action),
+	.ptr(ptr),
+	.copy_start(copy_start),
+	.copy_length(copy_length),
+	.ptr_out(ptr_out),
+	.proc_mem_data_in(proc_mem_data_in),
+	.proc_mem_data_out(proc_mem_data_out),
+	.proc_mem_addr(proc_mem_addr),
+	.proc_mem_rw(proc_mem_rw),
+	.oLEDG(dmaLEDG),
+	.oLEDR(dmaLEDR),
+	.iSW(iSW),
+	.oDISP(disps)
+);
 
 endmodule

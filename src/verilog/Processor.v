@@ -1,15 +1,25 @@
-module processor (
-	input proc_clock,
+module Processor (
+	input clock,
 	input mem_clock,
+	output RUN,
 	input START,
+	input [7:0] START_ADDR,
+	output TRIGGER_SPAWN,
+	output [7:0] SPAWN_ADDR,
+	input DISP_ACK,
 	input [7:0] MEM_DBG_ADDRESS,
 	output [7:0] MEM_DBG_OUT,
 	input [7:0] STACK_DBG_ADDRESS,
 	output [7:0] STACK_DBG_OUT,
 	input [7:0] CODE_DBG_ADDRESS,
 	output [15:0] CODE_DBG_OUT,
-	output reg [7:0] 	REGS [0:7]
+	output [7:0] REGS [0:7],
+	output [7:0] IP,
+	output dbg
 );
+
+logic LAST_DISP_ACK;
+
 
 `define HLT 		4'b0000
 `define JXX 		4'b0001
@@ -35,7 +45,7 @@ module processor (
 `define ADD 		4'b0110
 `define SUB 		4'b0111
 `define CMP 		4'b1000
-`define TEST 		4'b1001
+`define SPAWN 		4'b1001
 `define LEA 		4'b1010
 `define SHX 		4'b1011
 	`define SHR 	1'b0
@@ -72,8 +82,6 @@ logic N;		// negative/sign flag
 
 
 logic [15:0] IR; 	// instruction register
-
-logic  [7:0]	 IP;					// instruction pointer
 
 logic [15:0]  CODE_DATA_OUT;
 logic [15:0]  CODE_IN;
@@ -155,18 +163,17 @@ logic [7:0] result;
 logic jump;
 
 logic [1:0] STAGE;
-logic RUN;
 
 //=============================================================================
 // Structural coding
 //=============================================================================
 
-always@(posedge proc_clock, negedge START) begin
-	if(START == 0) begin
+always@(posedge clock) begin
+	if(START == 1) begin
 		RUN <= 1;
 		STAGE <= 0;
 		SP <= 0;
-		IP <= 0;
+		IP <= START_ADDR;
 		O <= 0;
 		C <= 0;
 		Z <= 0;
@@ -327,12 +334,13 @@ always@(posedge proc_clock, negedge START) begin
 						endcase
 					end
 
-					`TEST: begin
-						if(`TYPE == 1)
-							Z <= ~|(REGS[`REG_A] & `NUM);
-						else
-							Z <= ~|(REGS[`REG_A] & REGS[`REG_B]);
-						STAGE <= 0;
+					`SPAWN: begin
+						if(DISP_ACK == LAST_DISP_ACK) begin
+							LAST_DISP_ACK <= ~DISP_ACK;
+							SPAWN_ADDR <= `NUM;
+							TRIGGER_SPAWN <= ~TRIGGER_SPAWN;
+							STAGE <= 0;
+						end;
 					end
 
 					`LEA: begin

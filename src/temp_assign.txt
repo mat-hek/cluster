@@ -1,0 +1,9 @@
+
+assign oLEDR[16] = proc_running[0];
+assign oLEDR[17] = proc_running[1];
+assign oLEDR[13] = proc_start[0];
+assign oLEDR[12] = proc_start[1];
+dbg_1(oLEDR[15]),	disp run
+.dbg_2(oLEDR[14]),	disp start
+.dbg_3(oLEDR[11])	disp current_proc
+assign oLEDR[9] = d;

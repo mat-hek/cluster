@@ -68,7 +68,7 @@ module data_seg (
 	wire [7:0] sub_wire1;
 	wire [7:0] q_a = sub_wire0[7:0];
 	wire [7:0] q_b = sub_wire1[7:0];
-/*
+
 	altsyncram	altsyncram_component (
 				.wren_a (wren_a),
 				.clock0 (clock),
@@ -100,7 +100,7 @@ module data_seg (
 		altsyncram_component.clock_enable_output_a = "BYPASS",
 		altsyncram_component.clock_enable_output_b = "BYPASS",
 		altsyncram_component.indata_reg_b = "CLOCK0",
-		altsyncram_component.init_file = "data.mif",
+		altsyncram_component.init_file = "../src/mif/data.mif",
 		altsyncram_component.intended_device_family = "Cyclone II",
 		altsyncram_component.lpm_type = "altsyncram",
 		altsyncram_component.numwords_a = 256,
@@ -120,7 +120,7 @@ module data_seg (
 		altsyncram_component.width_byteena_b = 1,
 		altsyncram_component.wrcontrol_wraddress_reg_b = "CLOCK0";
 
-*/
+
 endmodule
 
 // ============================================================
